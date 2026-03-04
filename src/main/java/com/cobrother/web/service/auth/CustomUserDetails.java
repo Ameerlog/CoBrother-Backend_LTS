@@ -1,6 +1,6 @@
 package com.cobrother.web.service.auth;
 
-import com.cobrother.web.Entity.AppUser;
+import com.cobrother.web.Entity.user.AppUser;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

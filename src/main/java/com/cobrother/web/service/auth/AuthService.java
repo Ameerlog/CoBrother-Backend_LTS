@@ -1,8 +1,8 @@
 package com.cobrother.web.service.auth;
 
-import com.cobrother.web.Entity.AppUser;
-import com.cobrother.web.Entity.RefreshToken;
-import com.cobrother.web.Entity.UserRole;
+import com.cobrother.web.Entity.user.AppUser;
+import com.cobrother.web.Entity.user.RefreshToken;
+import com.cobrother.web.Entity.user.UserRole;
 import com.cobrother.web.Repository.UserRepository;
 import com.cobrother.web.model.*;
 import org.springframework.beans.factory.annotation.Autowired;

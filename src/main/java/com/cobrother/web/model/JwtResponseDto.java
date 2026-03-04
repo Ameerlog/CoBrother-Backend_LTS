@@ -1,6 +1,6 @@
 package com.cobrother.web.model;
 
-import com.cobrother.web.Entity.UserRole;
+import com.cobrother.web.Entity.user.UserRole;
 
 public class JwtResponseDto {
 

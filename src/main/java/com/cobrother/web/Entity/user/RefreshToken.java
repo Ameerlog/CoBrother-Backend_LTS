@@ -1,4 +1,4 @@
-package com.cobrother.web.Entity;
+package com.cobrother.web.Entity.user;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;

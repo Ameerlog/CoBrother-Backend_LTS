@@ -1,6 +1,8 @@
 package com.cobrother.web.Entity.coventure;
 
 import jakarta.persistence.Embeddable;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 
 @Embeddable
 public class BrandDetails{
@@ -8,14 +10,12 @@ public class BrandDetails{
     private String brandName;
     private String website;
     private String videoUrl;
+    @Enumerated(EnumType.STRING)
     private Industry industry;
     private Long dealValue;        // ₹5,00,000
     private String logoUrl;
+    @Enumerated(EnumType.STRING)
     public VentureType ventureType;
-
-
-
-
 
     public String getLogoUrl() {
         return logoUrl;
@@ -49,13 +49,6 @@ public class BrandDetails{
     public void setVentureType(VentureType ventureType) {
         this.ventureType = ventureType;
     }
-//    public String getBrandLogoUrl() {
-//        return brandLogoUrl;
-//    }
-//
-//    public void setBrandLogoUrl(String brandLogoUrl) {
-//        this.brandLogoUrl = brandLogoUrl;
-//    }
 
     public String getWebsite() {
         return website;
@@ -80,4 +73,14 @@ public class BrandDetails{
     public void setDealValue(Long dealValue) {
         this.dealValue = dealValue;
     }
+
+    public String getVideoUrl() {
+        return videoUrl;
+    }
+
+    public void setVideoUrl(String videoUrl) {
+        this.videoUrl = videoUrl;
+    }
+
+
 }

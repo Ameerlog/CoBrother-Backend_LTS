@@ -1,7 +1,7 @@
 package com.cobrother.web.Repository;
 
-import com.cobrother.web.Entity.AppUser;
-import com.cobrother.web.Entity.RefreshToken;
+import com.cobrother.web.Entity.user.AppUser;
+import com.cobrother.web.Entity.user.RefreshToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

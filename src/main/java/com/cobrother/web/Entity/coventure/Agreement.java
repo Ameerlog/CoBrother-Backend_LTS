@@ -6,9 +6,6 @@ import jakarta.persistence.Embeddable;
 public class Agreement {
 
     private boolean terms;
-//    private boolean partnershipConsent;
-
-    // getters and setters
 
     public boolean isTermsAccepted() {
         return terms;
@@ -18,11 +15,4 @@ public class Agreement {
         this.terms = terms;
     }
 
-//    public boolean isPartnershipConsent() {
-//        return partnershipConsent;
-//    }
-//
-//    public void setPartnershipConsent(boolean partnershipConsent) {
-//        this.partnershipConsent = partnershipConsent;
-//    }
 }

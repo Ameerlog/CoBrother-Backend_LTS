@@ -1,11 +1,12 @@
-package com.cobrother.web.Entity;
+package com.cobrother.web.Entity.user;
 
 
+import com.cobrother.web.Entity.cobranding.Domain;
+import com.cobrother.web.Entity.coventure.Venture;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 
@@ -65,6 +66,19 @@ public class AppUser {
 
     // For JWT refresh tokens
     private String refreshToken;
+
+
+    @OneToMany(mappedBy = "listedBy")
+    private List<Domain> listedDomains;
+
+    @OneToMany(mappedBy = "purchasedBy")
+    private List<Domain> purchasedDomains;
+
+    @OneToMany(mappedBy = "listedBy")
+    private List<Venture> listedVentures;
+
+    @OneToMany(mappedBy = "purchasedBy")
+    private List<Venture> purchasedVentures;
 
     @PrePersist
     public void onCreate() {
@@ -199,5 +213,37 @@ public class AppUser {
 
     public void setLastModified(LocalDateTime lastModified) {
         this.lastModified = lastModified;
+    }
+
+    public List<Domain> getListedDomains() {
+        return listedDomains;
+    }
+
+    public void setListedDomains(List<Domain> listedDomains) {
+        this.listedDomains = listedDomains;
+    }
+
+    public List<Domain> getPurchasedDomains() {
+        return purchasedDomains;
+    }
+
+    public void setPurchasedDomains(List<Domain> purchasedDomains) {
+        this.purchasedDomains = purchasedDomains;
+    }
+
+    public List<Venture> getListedVentures() {
+        return listedVentures;
+    }
+
+    public void setListedVentures(List<Venture> listedVentures) {
+        this.listedVentures = listedVentures;
+    }
+
+    public List<Venture> getPurchasedVentures() {
+        return purchasedVentures;
+    }
+
+    public void setPurchasedVentures(List<Venture> purchasedVentures) {
+        this.purchasedVentures = purchasedVentures;
     }
 }

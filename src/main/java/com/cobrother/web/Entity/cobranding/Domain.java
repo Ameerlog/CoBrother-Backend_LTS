@@ -1,23 +1,29 @@
-package com.cobrother.web.Entity.coventure;
+package com.cobrother.web.Entity.cobranding;
 
+import com.cobrother.web.Entity.coventure.Agreement;
+import com.cobrother.web.Entity.coventure.ContactInfo;
 import com.cobrother.web.Entity.user.AppUser;
 import jakarta.persistence.*;
 
 @Entity
-public class Venture {
+public class Domain {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Embedded
-    private BrandDetails brandDetails;
+    private String domainName;
+    private String domainExtension;
+    private String domainCategory;
+    private double askingPrice;
 
     @Embedded
     private ContactInfo contactInfo;
 
     @Embedded
     private Agreement agreement;
+
+    private String logo;
 
     private boolean status;
 
@@ -32,6 +38,10 @@ public class Venture {
     private AppUser purchasedBy;
 
     // getters setters
+
+    public Domain() {}
+
+
     public Long getId() {
         return id;
     }
@@ -40,12 +50,36 @@ public class Venture {
         this.id = id;
     }
 
-    public BrandDetails getBrandDetails() {
-        return brandDetails;
+    public String getDomainName() {
+        return domainName;
     }
 
-    public void setBrandDetails(BrandDetails brandDetails) {
-        this.brandDetails = brandDetails;
+    public void setDomainName(String domainName) {
+        this.domainName = domainName;
+    }
+
+    public String getDomainExtension() {
+        return domainExtension;
+    }
+
+    public void setDomainExtension(String domainExtension) {
+        this.domainExtension = domainExtension;
+    }
+
+    public String getDomainCategory() {
+        return domainCategory;
+    }
+
+    public void setDomainCategory(String domainCategory) {
+        this.domainCategory = domainCategory;
+    }
+
+    public double getAskingPrice() {
+        return askingPrice;
+    }
+
+    public void setAskingPrice(double askingPrice) {
+        this.askingPrice = askingPrice;
     }
 
     public ContactInfo getContactInfo() {
@@ -62,6 +96,14 @@ public class Venture {
 
     public void setAgreement(Agreement agreement) {
         this.agreement = agreement;
+    }
+
+    public String getLogo() {
+        return logo;
+    }
+
+    public void setLogo(String logo) {
+        this.logo = logo;
     }
 
     public boolean isStatus() {

@@ -1,6 +1,6 @@
 package com.cobrother.web.controller;
 
-import com.cobrother.web.Entity.AppUser;
+import com.cobrother.web.Entity.user.AppUser;
 import com.cobrother.web.model.*;
 import com.cobrother.web.service.auth.AuthService;
 import com.cobrother.web.service.auth.JwtService;

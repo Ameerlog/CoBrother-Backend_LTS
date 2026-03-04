@@ -1,7 +1,7 @@
 package com.cobrother.web.controller;
 
-import com.cobrother.web.Entity.AppUser;
-import com.cobrother.web.Entity.RefreshToken;
+import com.cobrother.web.Entity.user.AppUser;
+import com.cobrother.web.Entity.user.RefreshToken;
 import com.cobrother.web.model.JwtResponseDto;
 import com.cobrother.web.model.RefreshTokenRequestDto;
 import com.cobrother.web.service.auth.JwtService;

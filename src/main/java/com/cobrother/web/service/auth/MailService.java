@@ -1,6 +1,6 @@
 package com.cobrother.web.service.auth;
 
-import com.cobrother.web.Entity.AppUser;
+import com.cobrother.web.Entity.user.AppUser;
 import com.cobrother.web.Repository.UserRepository;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
