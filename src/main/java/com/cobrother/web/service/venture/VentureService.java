@@ -2,6 +2,7 @@ package com.cobrother.web.service.venture;
 
 import com.cobrother.web.Entity.coventure.Venture;
 import com.cobrother.web.Repository.VentureRepository;
+import com.cobrother.web.service.auth.CurrentUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -11,6 +12,9 @@ public class VentureService {
 
     @Autowired
     private VentureRepository ventureRepository;
+
+    @Autowired
+    private CurrentUserService currentUserService;
 
     public ResponseEntity<Venture> getVenture(long id) {
         try{
@@ -25,6 +29,8 @@ public class VentureService {
 
     public ResponseEntity<Venture> addVenture(Venture venture) {
         try {
+            venture.setListedBy(currentUserService.getCurrentUser());
+            venture.setStatus(true);
             return ResponseEntity.ok(ventureRepository.save(venture));
         }
         catch(Exception e){

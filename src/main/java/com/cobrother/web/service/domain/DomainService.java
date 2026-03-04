@@ -25,6 +25,7 @@ public class DomainService {
 
     public ResponseEntity<Domain> addDomain(Domain domain) {
         try {
+            domain.setStatus(true);
             return ResponseEntity.ok(domainRepository.save(domain));
         }
         catch(Exception e){

@@ -1,4 +1,4 @@
-package com.cobrother.web.model;
+package com.cobrother.web.model.auth;
 
 public class RefreshTokenRequestDto {
     private String refreshToken;

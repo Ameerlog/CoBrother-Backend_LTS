@@ -2,7 +2,7 @@ package com.cobrother.web.service.auth;
 
 import com.cobrother.web.Entity.user.AppUser;
 import com.cobrother.web.Repository.UserRepository;
-import com.cobrother.web.model.UserInfoDto;
+import com.cobrother.web.model.auth.UserInfoDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

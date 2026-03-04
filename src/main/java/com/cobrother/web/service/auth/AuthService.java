@@ -4,7 +4,7 @@ import com.cobrother.web.Entity.user.AppUser;
 import com.cobrother.web.Entity.user.RefreshToken;
 import com.cobrother.web.Entity.user.UserRole;
 import com.cobrother.web.Repository.UserRepository;
-import com.cobrother.web.model.*;
+import com.cobrother.web.model.auth.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

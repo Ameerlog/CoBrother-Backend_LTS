@@ -2,6 +2,7 @@ package com.cobrother.web.controller.domain;
 
 import com.cobrother.web.Entity.cobranding.Domain;
 import com.cobrother.web.Entity.coventure.Venture;
+import com.cobrother.web.service.auth.CurrentUserService;
 import com.cobrother.web.service.domain.DomainService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,9 @@ public class DomainController {
     @Autowired
     private DomainService domainService;
 
+    @Autowired
+    private CurrentUserService currentUserService;
+
     @GetMapping("/{id}")
     public ResponseEntity<Domain> getDomain(@PathVariable long id) {
         return domainService.getDomain(id);
@@ -21,6 +25,7 @@ public class DomainController {
 
     @PostMapping
     public ResponseEntity<Domain> addDomain(@RequestBody Domain domain) {
+        domain.setListedBy(currentUserService.getCurrentUser());
         return domainService.addDomain(domain);
     }
 

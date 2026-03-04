@@ -1,8 +1,9 @@
-package com.cobrother.web.controller;
+package com.cobrother.web.controller.auth;
 
 import com.cobrother.web.Entity.user.AppUser;
-import com.cobrother.web.model.*;
+import com.cobrother.web.model.auth.*;
 import com.cobrother.web.service.auth.AuthService;
+import com.cobrother.web.service.auth.CurrentUserService;
 import com.cobrother.web.service.auth.JwtService;
 import com.cobrother.web.service.auth.UserDetailsServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,8 @@ public class AuthController {
     @Autowired
     private UserDetailsServiceImpl userDetailsService;
 
+    @Autowired
+    private CurrentUserService currentUserService;
     // ==================== REGISTRATION & EMAIL VERIFICATION ====================
 
     /**
@@ -163,5 +166,19 @@ public class AuthController {
                     Map.of("success", false, "error", "Failed to update profile")
             );
         }
+    }
+
+    @GetMapping("/mee")
+    public ResponseEntity<?> getCurrentUser() {
+
+        AppUser user = currentUserService.getCurrentUser();
+
+        Map<String, Object> userInfo = new HashMap<>();
+        userInfo.put("id", user.getId());
+        userInfo.put("email", user.getEmail());
+        userInfo.put("role", user.getRole());
+        userInfo.put("emailVerified", user.getEmailVerified());
+
+        return ResponseEntity.ok(userInfo);
     }
 }

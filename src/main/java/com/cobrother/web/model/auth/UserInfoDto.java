@@ -1,4 +1,4 @@
-package com.cobrother.web.model;
+package com.cobrother.web.model.auth;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
