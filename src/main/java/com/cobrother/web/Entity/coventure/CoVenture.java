@@ -1,67 +1,57 @@
 package com.cobrother.web.Entity.coventure;
 
-
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import com.cobrother.web.Entity.user.AppUser;
+import jakarta.persistence.*;
 
 @Entity
 public class CoVenture {
+
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    public String id;
-    public String fullName;
-    public String phone;
-    public String location;
-    public String gstNo;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    public String getId() {
-        return id;
-    }
+    private String fullName;
+    private String phone;
+    private String location;
+    private String gstNo;
 
-    public void setId(String id) {
-        this.id = id;
-    }
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private CoVentureStatus status = CoVentureStatus.PENDING;
 
-    public String getFullName() {
-        return fullName;
-    }
+    // The venture this application is for
+    @ManyToOne
+    @JoinColumn(name = "venture_id", nullable = false)
+    private Venture venture;
 
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
-    }
+    // The user who applied
+    @ManyToOne
+    @JoinColumn(name = "applicant_user_id", nullable = false)
+    private AppUser applicant;
 
-    public String getPhoneNumber() {
-        return phone;
-    }
+    // ── Getters & Setters ────────────────────────────────────────────────────
 
-    public void setPhoneNumber(String phone) {
-        this.phone = phone;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public String getLocation() {
-        return location;
-    }
+    public String getFullName() { return fullName; }
+    public void setFullName(String fullName) { this.fullName = fullName; }
 
-    public void setLocation(String location) {
-        this.location = location;
-    }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
 
-    public String getPhone() {
-        return phone;
-    }
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
 
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
+    public String getGstNo() { return gstNo; }
+    public void setGstNo(String gstNo) { this.gstNo = gstNo; }
 
-    public String getGstNo() {
-        return gstNo;
-    }
+    public CoVentureStatus getStatus() { return status; }
+    public void setStatus(CoVentureStatus status) { this.status = status; }
 
-    public void setGstNo(String gstNo) {
-        this.gstNo = gstNo;
-    }
+    public Venture getVenture() { return venture; }
+    public void setVenture(Venture venture) { this.venture = venture; }
 
+    public AppUser getApplicant() { return applicant; }
+    public void setApplicant(AppUser applicant) { this.applicant = applicant; }
 }

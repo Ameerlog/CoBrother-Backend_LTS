@@ -2,6 +2,7 @@ package com.cobrother.web.Entity.user;
 
 
 import com.cobrother.web.Entity.cobranding.Domain;
+import com.cobrother.web.Entity.coventure.CoVenture;
 import com.cobrother.web.Entity.coventure.Venture;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -97,6 +98,10 @@ public class AppUser {
 
     @OneToMany(mappedBy = "purchasedBy")
     private List<Venture> purchasedVentures;
+
+
+    @OneToMany(mappedBy = "applicant")
+    private List<CoVenture> coVenturedVentures;
 
     @PrePersist
     public void onCreate() {
@@ -327,5 +332,13 @@ public class AppUser {
 
     public void setEmailOtpExpiry(LocalDateTime emailOtpExpiry) {
         this.emailOtpExpiry = emailOtpExpiry;
+    }
+
+    public List<CoVenture> getCoVenturedVentures() {
+        return coVenturedVentures;
+    }
+
+    public void setCoVenturedVentures(List<CoVenture> coVenturedVentures) {
+        this.coVenturedVentures = coVenturedVentures;
     }
 }

@@ -32,8 +32,11 @@ public class VentureService {
 
     public ResponseEntity<Venture> addVenture(Venture venture) {
         try {
-            venture.setListedBy(currentUserService.getCurrentUser());
+            System.out.println("coming ");
+            System.out.println(venture);
             venture.setStatus(true);
+
+            System.out.println("going ");
             return ResponseEntity.ok(ventureRepository.save(venture));
         }
         catch(Exception e){

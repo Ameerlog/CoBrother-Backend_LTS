@@ -1,6 +1,7 @@
 package com.cobrother.web.controller.venture;
 
 import com.cobrother.web.Entity.coventure.Venture;
+import com.cobrother.web.service.auth.CurrentUserService;
 import com.cobrother.web.service.venture.VentureService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -16,14 +17,19 @@ public class VentureController {
     @Autowired
     public VentureService ventureService;
 
+    @Autowired
+    private CurrentUserService currentUserService;
+
 
     @GetMapping("/{id}")
     public ResponseEntity<Venture> getVenture(@PathVariable long id) {
         return ventureService.getVenture(id);
     }
 
+
     @PostMapping
     public ResponseEntity<Venture> addVenture(@RequestBody Venture venture) {
+        venture.setListedBy(currentUserService.getCurrentUser());
         return ventureService.addVenture(venture);
     }
 
@@ -41,5 +47,7 @@ public class VentureController {
 //    public ResponseEntity<List<Venture>> getAllVenture() {
 //        return ventureService.getAllVenture();
 //    }
+
+
 
 }
