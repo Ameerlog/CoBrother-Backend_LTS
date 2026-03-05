@@ -31,7 +31,6 @@ public class TokenController {
     /**
      * Refresh access token using refresh token
      */
-    @PostMapping("/refresh")
     public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequestDto refreshTokenRequestDto) {
         try {
             return refreshTokenService.findByToken(refreshTokenRequestDto.getRefreshToken())
@@ -79,7 +78,6 @@ public class TokenController {
     /**
      * Logout user by revoking refresh token
      */
-    @PostMapping("/logout")
     public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {
         try {
             String token = authHeader.substring(7);

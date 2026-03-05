@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -353,5 +354,118 @@ public class AuthService {
         response.put("data", jwtResponse);
 
         return ResponseEntity.ok(response);
+    }
+
+    @Transactional
+    public ResponseEntity<?> completeProfile(String email,
+                                             CompleteProfileRequestDto request) {
+        try {
+            AppUser user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            if (Boolean.TRUE.equals(user.getProfileComplete())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                        Map.of("success", false, "error", "Profile is already complete")
+                );
+            }
+
+            String firstname = request.getFirstname() == null ? null
+                    : request.getFirstname().trim();
+            String lastname = request.getLastname() == null ? null
+                    : request.getLastname().trim();
+
+            if (firstname == null || firstname.isBlank()
+                    || lastname == null || lastname.isBlank()) {
+                return ResponseEntity.badRequest().body(
+                        Map.of("success", false, "error", "First name and last name are required")
+                );
+            }
+
+            user.setFirstname(firstname);
+            user.setLastname(lastname);
+            user.setProfileComplete(true);
+            userRepository.save(user);
+
+            // Issue new tokens with updated claims (profileComplete = true)
+            return buildTokenResponse(user, false);
+
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    Map.of("success", false, "error", e.getMessage())
+            );
+        }
+    }
+
+    /**
+     * Rotates the access token using a valid, non-expired refresh token.
+     */
+    @Transactional
+    public ResponseEntity<?> refreshAccessToken(RefreshTokenRequestDto request) {
+        try {
+            Optional<RefreshToken> tokenOpt = refreshTokenService.findByToken(
+                    request.getRefreshToken());
+
+            if (tokenOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                        Map.of("success", false, "error", "Refresh token not found")
+                );
+            }
+
+            RefreshToken refreshToken = refreshTokenService.verifyExpiration(tokenOpt.get());
+            AppUser user = refreshToken.getUser();
+
+            return buildTokenResponse(user, false);
+
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                    Map.of("success", false, "error", e.getMessage())
+            );
+        }
+    }
+
+    /**
+     * Revokes the user's refresh token (logout).
+     */
+    @Transactional
+    public ResponseEntity<?> logout(String email) {
+        try {
+            AppUser user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            refreshTokenService.revokeUserTokens(user);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Logged out successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    Map.of("success", false, "error", e.getMessage())
+            );
+        }
+    }
+
+    // ── Internal helper ──────────────────────────────────────────────────────
+
+    private ResponseEntity<?> buildTokenResponse(AppUser user, boolean isNewUser) {
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getEmail());
+
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", user.getId());
+        claims.put("role", user.getRole().name());
+        claims.put("profileComplete", user.getProfileComplete());
+
+        String jwt = jwtService.generateToken(user.getEmail(), claims);
+
+        JwtResponseDto jwtResponse = new JwtResponseDto();
+        jwtResponse.setAccessToken(jwt);
+        jwtResponse.setRefreshToken(refreshToken.getToken());
+        jwtResponse.setUserId(user.getId());
+        jwtResponse.setEmail(user.getEmail());
+        jwtResponse.setRole(user.getRole());
+        jwtResponse.setExpiresIn(jwtService.getExpirationTime());
+        jwtResponse.setNewUser(isNewUser);
+        jwtResponse.setEmailVerified(user.getEmailVerified());
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Success",
+                "data", jwtResponse
+        ));
     }
 }

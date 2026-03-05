@@ -28,10 +28,25 @@ spring:
             enable:
               true
 
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: 4792627824-vdes1hk2badtefmj9k8b4gbrb6pqqc3d.apps.googleusercontent.com
+            client-secret: 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
+            scope: openid,profile,email
+
 server:
   port: 8080
 
 jwt:
+  secret: cBp7/MqB9AzeWa6vlrvaIg8KdVI0rNbwgeXG1scQPI8T0CcC4TXb6VcW3OwH1cgGLOqeE7LZ/l7if1OP3v2usA==
   expiration: 3600000
   refresh:
     expiration: 2592000000
+
+app:
+  oauth2:
+    redirect-uri: http://localhost:5173/auth/callback

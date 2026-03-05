@@ -1,11 +1,14 @@
 package com.cobrother.web.service.venture;
 
 import com.cobrother.web.Entity.coventure.Venture;
+import com.cobrother.web.Entity.user.AppUser;
 import com.cobrother.web.Repository.VentureRepository;
 import com.cobrother.web.service.auth.CurrentUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class VentureService {
@@ -64,4 +67,12 @@ public class VentureService {
         }
         return ResponseEntity.badRequest().build();
     }
+
+//    public ResponseEntity<List<Venture>> getAllVenture() {
+//
+//        try{
+//            AppUser user = currentUserService.getCurrentUser();
+//            return ResponseEntity.ok(ventureRepository.findVenturesBy);
+//        }
+//    }
 }

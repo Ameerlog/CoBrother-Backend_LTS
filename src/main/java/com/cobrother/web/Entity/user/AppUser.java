@@ -28,46 +28,64 @@ public class AppUser {
     @Column(nullable = false, unique = true)
     private String email;
 
-
     private String firstname;
     private String lastname;
 
-    @Column(nullable = false)
+    // Nullable — only set for future phone+OTP users
     private String password;
 
-    // Optional but highly recommended
     @Column(nullable = false)
     private Boolean active = true;
 
+    // For OAuth users, email is verified by the provider
     @Column(nullable = false)
     private Boolean emailVerified = false;
 
-
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private UserRole role = UserRole.USER;
+    private UserRole role = UserRole.GUEST;
 
+    // How this user authenticated when they first registered
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private AuthProvider authProvider = AuthProvider.OAUTH;
 
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    // OAuth provider details
+    private String oauthProvider;       // e.g. "google"
+    private String oauthProviderId;     // provider's unique user ID
 
+    // True until the user has submitted their firstname + lastname
+    @Column(nullable = false)
+    private Boolean profileComplete = false;
 
-    // Email verification token
+    // ── Future: phone + OTP ──────────────────────────────────────────────────
+    @Column(unique = true)
+    private String phoneNumber;
+
+    @Column(nullable = false)
+    private Boolean phoneVerified = false;
+
+    // Email OTP for phone-flow email verification (future)
+    private String emailOtp;
+    private LocalDateTime emailOtpExpiry;
+
+    // ── Legacy / future password-based fields (kept nullable) ────────────────
     private String verificationToken;
     private LocalDateTime verificationTokenExpiry;
-
 
     private String otp;
     private LocalDateTime otpExpiry;
 
+    private String refreshToken;
+
+    // ── Timestamps ───────────────────────────────────────────────────────────
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
     @Column(nullable = false)
     private LocalDateTime lastModified;
 
-    // For JWT refresh tokens
-    private String refreshToken;
-
-
+    // ── Relations ────────────────────────────────────────────────────────────
     @OneToMany(mappedBy = "listedBy")
     private List<Domain> listedDomains;
 
@@ -91,8 +109,8 @@ public class AppUser {
         this.lastModified = LocalDateTime.now();
     }
 
-
     public AppUser() {}
+
 
 
     public String getFirstname() {
@@ -245,5 +263,69 @@ public class AppUser {
 
     public void setPurchasedVentures(List<Venture> purchasedVentures) {
         this.purchasedVentures = purchasedVentures;
+    }
+
+    public AuthProvider getAuthProvider() {
+        return authProvider;
+    }
+
+    public void setAuthProvider(AuthProvider authProvider) {
+        this.authProvider = authProvider;
+    }
+
+    public String getOauthProvider() {
+        return oauthProvider;
+    }
+
+    public void setOauthProvider(String oauthProvider) {
+        this.oauthProvider = oauthProvider;
+    }
+
+    public String getOauthProviderId() {
+        return oauthProviderId;
+    }
+
+    public void setOauthProviderId(String oauthProviderId) {
+        this.oauthProviderId = oauthProviderId;
+    }
+
+    public Boolean getProfileComplete() {
+        return profileComplete;
+    }
+
+    public void setProfileComplete(Boolean profileComplete) {
+        this.profileComplete = profileComplete;
+    }
+
+    public Boolean getPhoneVerified() {
+        return phoneVerified;
+    }
+
+    public void setPhoneVerified(Boolean phoneVerified) {
+        this.phoneVerified = phoneVerified;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public String getEmailOtp() {
+        return emailOtp;
+    }
+
+    public void setEmailOtp(String emailOtp) {
+        this.emailOtp = emailOtp;
+    }
+
+    public LocalDateTime getEmailOtpExpiry() {
+        return emailOtpExpiry;
+    }
+
+    public void setEmailOtpExpiry(LocalDateTime emailOtpExpiry) {
+        this.emailOtpExpiry = emailOtpExpiry;
     }
 }

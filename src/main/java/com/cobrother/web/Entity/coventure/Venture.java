@@ -21,6 +21,8 @@ public class Venture {
 
     private boolean status;
 
+    private long views;
+
     // Seller
     @ManyToOne
     @JoinColumn(name = "listed_by_user_id")
@@ -86,5 +88,13 @@ public class Venture {
 
     public void setPurchasedBy(AppUser purchasedBy) {
         this.purchasedBy = purchasedBy;
+    }
+
+    public long getViews() {
+        return views;
+    }
+
+    public void setViews(long views) {
+        this.views = views;
     }
 }

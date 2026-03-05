@@ -26,6 +26,7 @@ public class Domain {
     private String logo;
 
     private boolean status;
+    private long views;
 
     // Seller
     @ManyToOne
@@ -128,5 +129,13 @@ public class Domain {
 
     public void setPurchasedBy(AppUser purchasedBy) {
         this.purchasedBy = purchasedBy;
+    }
+
+    public long getViews() {
+        return views;
+    }
+
+    public void setViews(long views) {
+        this.views = views;
     }
 }

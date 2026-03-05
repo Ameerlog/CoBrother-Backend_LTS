@@ -9,6 +9,7 @@ import com.cobrother.web.service.auth.UserDetailsServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -72,7 +73,7 @@ public class AuthController {
      * POST /api/v1/auth/login
      */
     @PostMapping("/login")
-    public ResponseEntity<?> login( @RequestBody LoginRequestDto loginRequest) {
+    public ResponseEntity<?> login(@RequestBody LoginRequestDto loginRequest) {
         return authService.loginWithPassword(loginRequest);
     }
 
@@ -87,10 +88,6 @@ public class AuthController {
         return authService.sendOtpForLogin(otpRequest);
     }
 
-    /**
-     * Verify OTP and login
-     * POST /api/v1/auth/otp/verify
-     */
     @PostMapping("/otp/verify")
     public ResponseEntity<?> verifyOtp( @RequestBody OtpVerifyDto otpVerify) {
         return authService.verifyOtpAndLogin(otpVerify);
@@ -180,5 +177,34 @@ public class AuthController {
         userInfo.put("emailVerified", user.getEmailVerified());
 
         return ResponseEntity.ok(userInfo);
+    }
+
+    @PostMapping("/complete-profile")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> completeProfile(@RequestBody CompleteProfileRequestDto request) {
+        String email = currentUserService.getCurrentUser().getEmail();
+        return authService.completeProfile(email, request);
+    }
+
+    /**
+     * POST /api/v1/auth/refresh
+     *
+     * Exchange a valid refresh token for a new access token.
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequestDto request) {
+        return authService.refreshAccessToken(request);
+    }
+
+    /**
+     * POST /api/v1/auth/logout
+     *
+     * Revokes the current user's refresh token.
+     */
+    @PostMapping("/logout")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> logout() {
+        String email = currentUserService.getCurrentUser().getEmail();
+        return authService.logout(email);
     }
 }
