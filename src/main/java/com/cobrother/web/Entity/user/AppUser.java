@@ -2,6 +2,7 @@ package com.cobrother.web.Entity.user;
 
 
 import com.cobrother.web.Entity.cobranding.Domain;
+import com.cobrother.web.Entity.community.Community;
 import com.cobrother.web.Entity.coventure.CoVenture;
 import com.cobrother.web.Entity.coventure.Venture;
 import jakarta.persistence.*;
@@ -55,12 +56,14 @@ public class AppUser {
     private String oauthProvider;       // e.g. "google"
     private String oauthProviderId;     // provider's unique user ID
 
+    @OneToOne(mappedBy = "appUser")
+    private Community communityProfile;
+
     // True until the user has submitted their firstname + lastname
     @Column(nullable = false)
     private Boolean profileComplete = false;
 
     // ── Future: phone + OTP ──────────────────────────────────────────────────
-    @Column(unique = true)
     private String phoneNumber;
 
     @Column(nullable = false)
@@ -341,4 +344,8 @@ public class AppUser {
     public void setCoVenturedVentures(List<CoVenture> coVenturedVentures) {
         this.coVenturedVentures = coVenturedVentures;
     }
+
+    public Community getCommunityProfile() { return communityProfile; }
+    public void setCommunityProfile(Community communityProfile) { this.communityProfile = communityProfile; }
+
 }

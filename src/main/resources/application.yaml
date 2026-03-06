@@ -13,7 +13,7 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
 
   mail:
     username: vittalkatwe@gmail.com
@@ -50,3 +50,8 @@ jwt:
 app:
   oauth2:
     redirect-uri: http://localhost:5173/auth/callback
+
+linkedin:
+  client-id: 86pvzlb80fq0cu
+  client-secret: WPL_AP1.Y2NMvu2PeE74BBFM.DK54KQ==
+  redirect-uri: http://localhost:8080/api/v1/community/linkedin/callback
