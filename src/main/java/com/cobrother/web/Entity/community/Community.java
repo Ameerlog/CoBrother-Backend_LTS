@@ -36,6 +36,9 @@ public class Community {
 
     private String location;        // e.g. "Bengaluru, India"
 
+    @Column(columnDefinition = "TEXT")
+    private String whyImHere;
+
     // ── Relationship ───────────────────────────────────────────────────────────
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "app_user_id", unique = true)
@@ -99,4 +102,8 @@ public class Community {
     public void setViews(int views) {
         this.views = views;
     }
+
+
+    public String getWhyImHere() { return whyImHere; }
+    public void setWhyImHere(String v) { this.whyImHere = v; }
 }

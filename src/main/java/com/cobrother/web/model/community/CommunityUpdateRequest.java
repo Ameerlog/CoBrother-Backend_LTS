@@ -8,6 +8,7 @@ public class CommunityUpdateRequest {
     private String skills;
     private CommunityIndustry industry;
     private String location;
+    private String whyImHere;
 
     public CommunityRole     getRole()                    { return role; }
     public void              setRole(CommunityRole v)     { this.role = v; }
@@ -17,4 +18,12 @@ public class CommunityUpdateRequest {
     public void              setIndustry(CommunityIndustry v){ this.industry = v; }
     public String            getLocation()                { return location; }
     public void              setLocation(String v)        { this.location = v; }
+
+    public String getWhyImHere() {
+        return whyImHere;
+    }
+
+    public void setWhyImHere(String whyImHere) {
+        this.whyImHere = whyImHere;
+    }
 }

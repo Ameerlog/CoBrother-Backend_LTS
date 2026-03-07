@@ -44,6 +44,10 @@ public class CoVenture {
     })
     private Venture venture;
 
+    // Add after private String gstNo;:
+    @Column(columnDefinition = "TEXT")
+    private String description;   // how the applicant can help
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "applicant_user_id", nullable = false)
     @JsonIgnoreProperties({
@@ -77,4 +81,8 @@ public class CoVenture {
 
     public AppUser getApplicant() { return applicant; }
     public void setApplicant(AppUser applicant) { this.applicant = applicant; }
+
+
+    public String getDescription() { return description; }
+    public void setDescription(String v) { this.description = v; }
 }

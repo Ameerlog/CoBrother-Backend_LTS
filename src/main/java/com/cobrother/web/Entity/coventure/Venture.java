@@ -46,6 +46,15 @@ public class Venture {
             "verificationToken","verificationTokenExpiry","refreshToken","hibernateLazyInitializer"})
     private AppUser purchasedBy;
 
+
+    @Enumerated(EnumType.STRING)
+    private VentureStage stage;          // IDEA, MVP, REVENUE_GENERATING, SCALING
+
+    private String lookingFor;           // free text: "Marketing co-founder, Angel investor"
+
+    @Column(columnDefinition = "TEXT")
+    private String currentProblem;
+
     // Break the back-reference loop: don't serialize applications from Venture side
     @OneToMany(mappedBy = "venture", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnoreProperties("venture")
@@ -83,5 +92,29 @@ public class Venture {
     public List<CoVenture> getCoVentureApplications() { return coVentureApplications; }
     public void setCoVentureApplications(List<CoVenture> coVentureApplications) {
         this.coVentureApplications = coVentureApplications;
+    }
+
+    public String getCurrentProblem() {
+        return currentProblem;
+    }
+
+    public void setCurrentProblem(String currentProblem) {
+        this.currentProblem = currentProblem;
+    }
+
+    public String getLookingFor() {
+        return lookingFor;
+    }
+
+    public void setLookingFor(String lookingFor) {
+        this.lookingFor = lookingFor;
+    }
+
+    public VentureStage getStage() {
+        return stage;
+    }
+
+    public void setStage(VentureStage stage) {
+        this.stage = stage;
     }
 }

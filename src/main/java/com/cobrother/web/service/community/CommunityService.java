@@ -141,6 +141,7 @@ public class CommunityService {
         if (req.getSkills()   != null) c.setSkills(req.getSkills());
         if (req.getIndustry() != null) c.setIndustry(req.getIndustry());
         if (req.getLocation() != null) c.setLocation(req.getLocation());
+        if (req.getWhyImHere() !=null) c.setWhyImHere(req.getWhyImHere());
         return ResponseEntity.ok(communityRepository.save(c));
     }
 

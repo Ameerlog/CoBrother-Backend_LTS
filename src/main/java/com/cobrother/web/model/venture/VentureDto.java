@@ -20,6 +20,12 @@ public class VentureDto {
     private UserSummary listedBy;
     private UserSummary purchasedBy;
 
+
+    private VentureStage stage;
+    private String lookingFor;
+    private String currentProblem;
+
+
     public static class UserSummary {
         public Long id;
         public String email;
@@ -36,6 +42,10 @@ public class VentureDto {
         dto.status = v.isStatus();
         dto.views = v.getViews();
         dto.coVentureApplicationCount = v.getCoVentureApplicationCount();
+
+        dto.stage = v.getStage();
+        dto.lookingFor = v.getLookingFor();
+        dto.currentProblem = v.getCurrentProblem();
 
         if (v.getListedBy() != null) {
             UserSummary u = new UserSummary();
@@ -65,4 +75,9 @@ public class VentureDto {
     public long getCoVentureApplicationCount() { return coVentureApplicationCount; }
     public UserSummary getListedBy() { return listedBy; }
     public UserSummary getPurchasedBy() { return purchasedBy; }
+
+    public VentureStage getStage() { return stage; }
+    public String getLookingFor() { return lookingFor; }
+    public String getCurrentProblem() { return currentProblem; }
+
 }
