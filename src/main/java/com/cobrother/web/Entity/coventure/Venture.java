@@ -1,6 +1,7 @@
 package com.cobrother.web.Entity.coventure;
 
 import com.cobrother.web.Entity.user.AppUser;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 import java.util.ArrayList;
@@ -23,24 +24,31 @@ public class Venture {
     private Agreement agreement;
 
     private boolean status;
-
     private long views;
 
     @Column(nullable = false, columnDefinition = "bigint default 0")
     private long coVentureApplicationCount = 0;
 
-    // Seller
-    @ManyToOne
+    // Only expose safe user fields — never the full graph
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "listed_by_user_id")
+    @JsonIgnoreProperties({"listedDomains","purchasedDomains","listedVentures",
+            "purchasedVentures","coVenturedVentures","communityProfile",
+            "password","otp","otpExpiry","emailOtp","emailOtpExpiry",
+            "verificationToken","verificationTokenExpiry","refreshToken","hibernateLazyInitializer"})
     private AppUser listedBy;
 
-    // Buyer
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "purchased_by_user_id")
+    @JsonIgnoreProperties({"listedDomains","purchasedDomains","listedVentures",
+            "purchasedVentures","coVenturedVentures","communityProfile",
+            "password","otp","otpExpiry","emailOtp","emailOtpExpiry",
+            "verificationToken","verificationTokenExpiry","refreshToken","hibernateLazyInitializer"})
     private AppUser purchasedBy;
 
-    // All co-venture applications for this venture
+    // Break the back-reference loop: don't serialize applications from Venture side
     @OneToMany(mappedBy = "venture", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnoreProperties("venture")
     private List<CoVenture> coVentureApplications = new ArrayList<>();
 
     // ── Getters & Setters ────────────────────────────────────────────────────
@@ -70,9 +78,7 @@ public class Venture {
     public void setViews(long views) { this.views = views; }
 
     public long getCoVentureApplicationCount() { return coVentureApplicationCount; }
-    public void setCoVentureApplicationCount(long coVentureApplicationCount) {
-        this.coVentureApplicationCount = coVentureApplicationCount;
-    }
+    public void setCoVentureApplicationCount(long count) { this.coVentureApplicationCount = count; }
 
     public List<CoVenture> getCoVentureApplications() { return coVentureApplications; }
     public void setCoVentureApplications(List<CoVenture> coVentureApplications) {

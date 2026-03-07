@@ -8,6 +8,8 @@ import java.util.Optional;
 
 @Repository
 public interface CommunityRepository extends JpaRepository<Community, Long> {
-
+    Optional<Community> findByAppUserId(Long userId);
     Optional<Community> findByLinkedInId(String linkedInId);
+    boolean existsByAppUserId(Long userId);
+
 }

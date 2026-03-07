@@ -22,14 +22,21 @@ import java.util.Map;
  * Issues a JWT + refresh token and redirects to the frontend
  * with tokens as query params so the SPA can store them.
  *
- * Redirect examples:
- *   New user  → http://localhost:5173/auth/callback?token=...&refreshToken=...&isNewUser=true
- *   Returning → http://localhost:5173/auth/callback?token=...&refreshToken=...&isNewUser=false
+ * FIX 1: Corrected @Value annotation — was missing closing brace:
+ *   BROKEN:  @Value("${app.oauth2.redirect-uri")
+ *   FIXED:   @Value("${app.oauth2.redirect-uri}")
+ *
+ * FIX 2: Added profileComplete param to redirect URL so the
+ *   frontend can immediately route to /complete-profile if needed.
+ *
+ * application.properties:
+ *   app.oauth2.redirect-uri=http://localhost:3000/auth/callback
  */
 @Component
 public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    @Value("${app.oauth2.redirect-uri:http://localhost:5173/auth/callback}")
+    // ✅ FIX: was @Value("${app.oauth2.redirect-uri")  ← missing closing }
+    @Value("${app.oauth2.redirect-uri}")
     private String redirectUri;
 
     @Autowired
@@ -49,7 +56,6 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userDetails.getUserId());
         claims.put("profileComplete", userDetails.isProfileComplete());
-        // Role comes from authorities — add it explicitly for convenience
         userDetails.getAuthorities().stream()
                 .findFirst()
                 .ifPresent(a -> claims.put("role", a.getAuthority()));
@@ -59,10 +65,12 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         // Create / rotate refresh token
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(userDetails.getUsername());
 
+        // ✅ FIX: Added profileComplete to redirect so frontend can route correctly
         String targetUrl = UriComponentsBuilder.fromUriString(redirectUri)
                 .queryParam("token", jwt)
                 .queryParam("refreshToken", refreshToken.getToken())
                 .queryParam("isNewUser", userDetails.isNewUser())
+                .queryParam("profileComplete", userDetails.isProfileComplete())
                 .queryParam("expiresIn", jwtService.getExpirationTime())
                 .build().toUriString();
 

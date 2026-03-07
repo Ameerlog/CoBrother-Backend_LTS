@@ -19,57 +19,37 @@ public class VentureService {
     @Autowired
     private CurrentUserService currentUserService;
 
-    public ResponseEntity<Venture> getVenture(long id) {
-        try{
-            return ResponseEntity.ok(ventureRepository.getVentureById(id));
-        }
-        catch(Exception e){
-            e.printStackTrace();
-        }
-
-        return ResponseEntity.notFound().build();
+    public List<Venture> getAllVentures() {
+        return ventureRepository.findAll();
     }
 
-    public ResponseEntity<Venture> addVenture(Venture venture) {
-        try {
-            System.out.println("coming ");
-            System.out.println(venture);
-            venture.setStatus(true);
-
-            System.out.println("going ");
-            return ResponseEntity.ok(ventureRepository.save(venture));
-        }
-        catch(Exception e){
-            e.printStackTrace();
-        }
-        return ResponseEntity.badRequest().build();
+    public List<Venture> getVenturesByUser(AppUser user) {
+        return ventureRepository.findByListedBy(user);
+        // Add to VentureRepository: List<Venture> findByListedBy(AppUser listedBy);
     }
 
-
-    public ResponseEntity<Venture> updateVenture(long id, Venture venture) {
-        Venture updatedVenture = ventureRepository.getVentureById(id);
-        try {
-            updatedVenture.setAgreement(venture.getAgreement());
-            updatedVenture.setBrandDetails(venture.getBrandDetails());
-            updatedVenture.setContactInfo(venture.getContactInfo());
-            return ResponseEntity.ok(ventureRepository.save(updatedVenture));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return ResponseEntity.badRequest().build();
+    public Venture getVentureEntity(long id) {
+        return ventureRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Venture not found: " + id));
     }
 
-    public ResponseEntity<Venture> deleteVenture(long id) {
-        try {
-            Venture venture = ventureRepository.getVentureById(id);
-            venture.setStatus(false);
-            return ResponseEntity.ok(ventureRepository.save(venture));
-        }
-        catch(Exception e){
-            e.printStackTrace();
-        }
-        return ResponseEntity.badRequest().build();
+    public Venture addVentureEntity(Venture venture) {
+        return ventureRepository.save(venture);
     }
+
+    public Venture updateVentureEntity(long id, Venture incoming) {
+        Venture existing = getVentureEntity(id);
+        existing.setBrandDetails(incoming.getBrandDetails());
+        existing.setContactInfo(incoming.getContactInfo());
+        existing.setAgreement(incoming.getAgreement());
+        existing.setStatus(incoming.isStatus());
+        return ventureRepository.save(existing);
+    }
+
+    public void deleteVenture(long id) {
+        ventureRepository.deleteById(id);
+    }
+
 
 //    public ResponseEntity<List<Venture>> getAllVenture() {
 //

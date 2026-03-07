@@ -13,7 +13,7 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
 
   mail:
     username: vittalkatwe@gmail.com
@@ -37,21 +37,23 @@ spring:
             client-id: 4792627824-vdes1hk2badtefmj9k8b4gbrb6pqqc3d.apps.googleusercontent.com
             client-secret: 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
             scope: openid,profile,email
+            redirect-uri: http://localhost:8080/login/oauth2/code/google
 
 server:
   port: 8080
 
 jwt:
   secret: cBp7/MqB9AzeWa6vlrvaIg8KdVI0rNbwgeXG1scQPI8T0CcC4TXb6VcW3OwH1cgGLOqeE7LZ/l7if1OP3v2usA==
-  expiration: 3600000
+  expiration: 36000000
   refresh:
     expiration: 2592000000
 
 app:
+  frontend-url: http://localhost:3000
   oauth2:
-    redirect-uri: http://localhost:5173/auth/callback
+    redirect-uri: http://localhost:3000/auth/callback
 
 linkedin:
-  client-id: 86pvzlb80fq0cu
-  client-secret: WPL_AP1.Y2NMvu2PeE74BBFM.DK54KQ==
+  client-id: 77kepiwbqxdlhh
+  client-secret: WPL_AP1.vWPcBMBGJzvjKsb8.D2EVtw==
   redirect-uri: http://localhost:8080/api/v1/community/linkedin/callback

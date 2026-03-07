@@ -1,9 +1,26 @@
 package com.cobrother.web.Entity.coventure;
 
 import com.cobrother.web.Entity.user.AppUser;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
+/**
+ * CoVenture with a UNIQUE constraint on (venture_id, applicant_user_id).
+ * Three-layer duplicate prevention:
+ *  1. Frontend: checks /my-status before showing form
+ *  2. Backend controller: existsByVentureIdAndApplicantId check before insert
+ *  3. Database: UniqueConstraint rejects concurrent duplicate inserts
+ */
 @Entity
+@Table(
+        name = "co_venture",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name        = "uq_coventure_venture_applicant",
+                        columnNames = { "venture_id", "applicant_user_id" }
+                )
+        }
+)
 public class CoVenture {
 
     @Id
@@ -19,17 +36,23 @@ public class CoVenture {
     @Column(nullable = false)
     private CoVentureStatus status = CoVentureStatus.PENDING;
 
-    // The venture this application is for
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "venture_id", nullable = false)
+    @JsonIgnoreProperties({
+            "coVentureApplications", "listedBy", "purchasedBy",
+            "hibernateLazyInitializer", "handler"
+    })
     private Venture venture;
 
-    // The user who applied
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "applicant_user_id", nullable = false)
+    @JsonIgnoreProperties({
+            "listedDomains", "purchasedDomains", "listedVentures", "purchasedVentures",
+            "coVenturedVentures", "communityProfile", "password", "otp", "otpExpiry",
+            "emailOtp", "emailOtpExpiry", "verificationToken", "verificationTokenExpiry",
+            "refreshToken", "hibernateLazyInitializer", "handler"
+    })
     private AppUser applicant;
-
-    // ── Getters & Setters ────────────────────────────────────────────────────
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

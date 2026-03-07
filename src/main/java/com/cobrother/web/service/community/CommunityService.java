@@ -1,9 +1,12 @@
 package com.cobrother.web.service.community;
 
 import com.cobrother.web.Entity.community.Community;
+import com.cobrother.web.Entity.user.AppUser;
 import com.cobrother.web.Repository.CommunityRepository;
 import com.cobrother.web.model.community.CommunityUpdateRequest;
 import com.cobrother.web.service.auth.CurrentUserService;
+import com.cobrother.web.service.auth.JwtService;
+import com.cobrother.web.service.auth.UserDetailsServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -11,180 +14,184 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
 public class CommunityService {
 
-    @Value("${linkedin.client-id}")
-    private String clientId;
+    @Value("${linkedin.client-id}")       private String clientId;
+    @Value("${linkedin.client-secret}")   private String clientSecret;
+    @Value("${linkedin.redirect-uri}")    private String redirectUri;
 
-    @Value("${linkedin.client-secret}")
-    private String clientSecret;
+    @Autowired private JwtService jwtService;
+    @Autowired private UserDetailsServiceImpl userDetailsService;
+    @Autowired private CommunityRepository communityRepository;
+    @Autowired private CurrentUserService  currentUserService;
 
-    @Value("${linkedin.redirect-uri}")
-    private String redirectUri;
+    private final RestTemplate rest = new RestTemplate();
 
-    @Autowired
-    private CommunityRepository communityRepository;
-
-    @Autowired
-    private CurrentUserService currentUserService;
-
-    private final RestTemplate restTemplate = new RestTemplate();
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
-    // ── Step 1: Generate LinkedIn OAuth URL ─────────────────────────────────
     public ResponseEntity<String> getLinkedInAuthUrl() {
+        AppUser me = currentUserService.getCurrentUser();
+        String state = encode(me.getEmail()); // just pass email directly
+        String enc = encode(redirectUri);
         String url = "https://www.linkedin.com/oauth/v2/authorization"
-                + "?response_type=code"
-                + "&client_id=" + clientId
-                + "&redirect_uri=" + redirectUri
-                + "&scope=openid%20profile%20email";
-
-        return ResponseEntity.ok(url);
+                + "?response_type=code&client_id=" + clientId
+                + "&redirect_uri=" + enc
+                + "&state=" + state
+                + "&scope=openid%20profile%20email%20r_profile_basicinfo";
+        return ResponseEntity.ok("{\"url\":\"" + url + "\"}");
     }
 
-    // ── Step 2: Handle callback, exchange code, fetch profile, save ──────────
-    public ResponseEntity<?> handleLinkedInCallback(String code) {
-        try {
-            // Exchange authorization code for access token
-            String accessToken = exchangeCodeForToken(code);
-            if (accessToken == null) {
-                return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-                        .body("Failed to obtain access token from LinkedIn.");
-            }
+    public Long handleLinkedInCallbackAndReturnId(String code, String state) {
+        String token = exchangeCode(code);
+        Map<String, Object> info = fetchUserInfo(token);
 
-            // Fetch user profile using OpenID userinfo endpoint
-            JsonNode profile = fetchLinkedInProfile(accessToken);
-            if (profile == null) {
-                return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-                        .body("Failed to fetch profile from LinkedIn.");
-            }
+        String sub     = String.valueOf(info.get("sub"));
+        String name    = (String) info.getOrDefault("name", "");
+        String picture = (String) info.getOrDefault("picture", "");
 
-            String linkedInId   = profile.path("sub").asText();
-            String name         = profile.path("name").asText();        // full name
-            String imageUrl     = profile.path("picture").asText();     // profile pic URL
-            String profileUrl   = "https://www.linkedin.com/in/" + profile.path("given_name").asText().toLowerCase();
+        String firstName = (String) info.getOrDefault("given_name", "");
+        String lastName  = (String) info.getOrDefault("family_name", "");
+        String profileUrl = "https://www.linkedin.com/search/results/people/?firstName="
+                + encode(firstName) + "&lastName=" + encode(lastName);
 
-            // Upsert: if this LinkedIn account already has a community profile, return it
-            Optional<Community> existing = communityRepository.findByLinkedInId(linkedInId);
-            if (existing.isPresent()) {
-                return ResponseEntity.ok(existing.get());
-            }
+        String email = java.net.URLDecoder.decode(state, StandardCharsets.UTF_8);
+        AppUser me = userDetailsService.getUserByEmail(email);
 
-            // Create new community profile
-            Community community = new Community();
-            community.setLinkedInId(linkedInId);
-            community.setName(name);
-            community.setImageUrl(imageUrl);
-            community.setLinkedInProfileUrl(profileUrl);
-
-            // Link to logged-in AppUser if present (optional — won't fail if not authenticated)
-            try {
-                community.setAppUser(currentUserService.getCurrentUser());
-            } catch (Exception ignored) {}
-
-            return ResponseEntity.ok(communityRepository.save(community));
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Something went wrong during LinkedIn authentication.");
+        // ✅ Check if this LinkedIn ID is already linked to a DIFFERENT user
+        Optional<Community> existingByLinkedIn = communityRepository.findByLinkedInId(sub);
+        if (existingByLinkedIn.isPresent() &&
+                !existingByLinkedIn.get().getAppUser().getId().equals(me.getId())) {
+            throw new RuntimeException("This LinkedIn account is already connected to another user.");
         }
-    }
 
-    // ── Step 3: User manually fills in role, skills, industry, location ──────
-    public ResponseEntity<?> updateCommunityProfile(Long id, CommunityUpdateRequest request) {
+        Community c = communityRepository.findByAppUserId(me.getId())
+                .orElseGet(Community::new);
+        c.setLinkedInId(sub);
+        c.setName(name);
+        c.setImageUrl(picture);
+        c.setLinkedInProfileUrl(profileUrl);
+        c.setAppUser(me);
+
+        return communityRepository.save(c).getId();
+    }
+    
+    private String fetchProfileUrl(String token) {
         try {
-            Community community = communityRepository.findById(id)
-                    .orElse(null);
+            HttpHeaders h = new HttpHeaders();
+            h.setBearerAuth(token);
+            h.set("LinkedIn-Version", "202401");
 
-            if (community == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body("Community profile not found.");
+            ResponseEntity<Map> resp = rest.exchange(
+                    "https://api.linkedin.com/v2/userinfo",  // same endpoint you already use
+                    HttpMethod.GET,
+                    new HttpEntity<>(h),
+                    Map.class
+            );
+
+            System.out.println("Full userinfo response: " + resp.getBody());
+            // Log every key available
+            if (resp.getBody() != null) {
+                resp.getBody().forEach((k, v) ->
+                        System.out.println("Key: " + k + " = " + v));
             }
-
-            if (request.getRole()     != null) community.setRole(request.getRole());
-            if (request.getSkills()   != null) community.setSkills(request.getSkills());
-            if (request.getIndustry() != null) community.setIndustry(request.getIndustry());
-            if (request.getLocation() != null) community.setLocation(request.getLocation());
-
-            return ResponseEntity.ok(communityRepository.save(community));
-
         } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Failed to update community profile.");
+            System.out.println("Error: " + e.getMessage());
         }
+        return null;
     }
 
-    // ── Get all community profiles (for community listing page) ──────────────
+    private String fetchVanityUrl(String token, String sub) {
+        try {
+            HttpHeaders h = new HttpHeaders();
+            h.setBearerAuth(token);
+            h.set("LinkedIn-Version", "202401");
+            h.set("X-Restli-Protocol-Version", "2.0.0");
+
+            ResponseEntity<Map> resp = rest.exchange(
+                    "https://api.linkedin.com/v2/people/(id:" + sub + ")?projection=(id,vanityName)",
+                    HttpMethod.GET,
+                    new HttpEntity<>(h),
+                    Map.class
+            );
+
+            if (resp.getBody() != null && resp.getBody().containsKey("vanityName")) {
+                return "https://www.linkedin.com/in/" + resp.getBody().get("vanityName");
+            }
+        } catch (Exception e) {
+            System.out.println("Could not fetch vanity URL: " + e.getMessage());
+        }
+        // fallback
+        return "https://www.linkedin.com/search/results/people/?keywords="
+                + java.net.URLEncoder.encode(sub, StandardCharsets.UTF_8);
+    }
+
+    public ResponseEntity<?> updateCommunityProfile(Long id, CommunityUpdateRequest req) {
+        Optional<Community> opt = communityRepository.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        Community c = opt.get();
+        AppUser me = currentUserService.getCurrentUser();
+        if (!c.getAppUser().getId().equals(me.getId()))
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "You can only edit your own profile."));
+        if (req.getRole()     != null) c.setRole(req.getRole());
+        if (req.getSkills()   != null) c.setSkills(req.getSkills());
+        if (req.getIndustry() != null) c.setIndustry(req.getIndustry());
+        if (req.getLocation() != null) c.setLocation(req.getLocation());
+        return ResponseEntity.ok(communityRepository.save(c));
+    }
+
     public ResponseEntity<?> getAllProfiles() {
-        try {
-            return ResponseEntity.ok(communityRepository.findAll());
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Failed to fetch community profiles.");
-        }
+        return ResponseEntity.ok(communityRepository.findAll());
     }
 
-    // ── Get single profile ────────────────────────────────────────────────────
     public ResponseEntity<?> getProfile(Long id) {
         return communityRepository.findById(id)
                 .<ResponseEntity<?>>map(ResponseEntity::ok)
-                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Profile not found."));
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
-
-    private String exchangeCodeForToken(String code) {
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-            body.add("grant_type",    "authorization_code");
-            body.add("code",          code);
-            body.add("redirect_uri",  redirectUri);
-            body.add("client_id",     clientId);
-            body.add("client_secret", clientSecret);
-
-            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
-
-            ResponseEntity<String> response = restTemplate.postForEntity(
-                    "https://www.linkedin.com/oauth/v2/accessToken", request, String.class);
-
-            JsonNode json = objectMapper.readTree(response.getBody());
-            return json.path("access_token").asText(null);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+    public ResponseEntity<?> getMyProfile() {
+        AppUser me = currentUserService.getCurrentUser();
+        return communityRepository.findByAppUserId(me.getId())
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    private JsonNode fetchLinkedInProfile(String accessToken) {
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(accessToken);
+    // ── helpers ──────────────────────────────────────────────────────────────
+    private String exchangeCode(String code) {
+        HttpHeaders h = new HttpHeaders();
+        h.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        MultiValueMap<String,String> body = new LinkedMultiValueMap<>();
+        body.add("grant_type",    "authorization_code");
+        body.add("code",          code);
+        body.add("redirect_uri",  redirectUri);
+        body.add("client_id",     clientId);
+        body.add("client_secret", clientSecret);
+        Map<?,?> resp = rest.postForObject(
+                "https://www.linkedin.com/oauth/v2/accessToken",
+                new HttpEntity<>(body, h), Map.class);
+        if (resp == null || !resp.containsKey("access_token"))
+            throw new RuntimeException("LinkedIn token exchange failed");
+        return (String) resp.get("access_token");
+    }
 
-            HttpEntity<Void> request = new HttpEntity<>(headers);
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> fetchUserInfo(String token) {
+        HttpHeaders h = new HttpHeaders();
+        h.setBearerAuth(token);
+        ResponseEntity<Map> resp = rest.exchange(
+                "https://api.linkedin.com/v2/userinfo",
+                HttpMethod.GET, new HttpEntity<>(h), Map.class);
+        if (resp.getBody() == null) throw new RuntimeException("LinkedIn userinfo empty");
+        return (Map<String, Object>) resp.getBody();
+    }
 
-            // OpenID Connect userinfo endpoint — returns sub, name, picture, email
-            ResponseEntity<String> response = restTemplate.exchange(
-                    "https://api.linkedin.com/v2/userinfo",
-                    HttpMethod.GET, request, String.class);
-
-            return objectMapper.readTree(response.getBody());
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+    private String encode(String s) {
+        try { return java.net.URLEncoder.encode(s, "UTF-8"); }
+        catch (Exception e) { return s; }
     }
 }

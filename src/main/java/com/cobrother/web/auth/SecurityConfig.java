@@ -36,7 +36,6 @@ public class SecurityConfig {
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
 
-
     @Autowired
     private CustomOAuth2UserService customOAuth2UserService;
 
@@ -52,8 +51,8 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints - Registration, Login, Email Verification, OTP
                         .requestMatchers(
+                                // ── Auth ─────────────────────────────────────
                                 "/api/v1/auth/register",
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/verify-email",
@@ -62,28 +61,33 @@ public class SecurityConfig {
                                 "/api/v1/auth/otp/verify",
                                 "/api/v1/auth/otp/resend",
                                 "/api/v1/auth/refresh",
+                                "/api/v1/auth/logout",
                                 "/api/v1/auth/oauth/**",
+                                "/api/v1/community/linkedin/auth",
+                                "/api/v1/community/linkedin/callback",
+                                "/api/v1/community/all",
+                                // ── OAuth2 spring endpoints ───────────────────
+                                "/oauth2/**",
+                                "/login/oauth2/**",
+                                // ── Public listings ───────────────────────────
+                                "/api/v1/venture/all",
+                                "/api/v1/community/all",
+                                "/api/v1/community/linkedin/auth",
+                                "/api/v1/community/linkedin/callback",
+                                // ── Infra ─────────────────────────────────────
                                 "/api/v1/services/public/**",
-                                // Add other public endpoints
                                 "/actuator/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/error",
-                                "/api/v1/auth/refresh",
-                                "/api/v1/auth/logout"
+                                "/error"
                         ).permitAll()
-                        // Admin endpoints
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                        // All other endpoints require authentication
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                // OAuth2 login
                 .oauth2Login(oauth2 -> oauth2
-                        // Spring Boot auto-configures /oauth2/authorization/{registrationId}
-                        // e.g. GET /oauth2/authorization/google  → triggers Google login
                         .userInfoEndpoint(userInfo -> userInfo
                                 .oidcUserService(customOAuth2UserService)
                         )
@@ -99,8 +103,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:5173",
-                "http://localhost:3000",
+                "http://localhost:5173",   // Vite default port
+                "http://localhost:3000",   // Vite if configured to 3000
                 "http://localhost:8080"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));

@@ -1,64 +1,66 @@
 package com.cobrother.web.controller.community;
 
-import com.cobrother.web.dto.community.CommunityUpdateRequest;
+import com.cobrother.web.model.community.CommunityUpdateRequest;
 import com.cobrother.web.service.community.CommunityService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequestMapping("api/v1/community")
 public class CommunityController {
 
-    @Autowired
-    private CommunityService communityService;
+    @Autowired private CommunityService communityService;
 
-    /**
-     * GET /api/v1/community/linkedin/auth
-     * Returns the LinkedIn OAuth URL — frontend redirects user to this.
-     */
+    @Value("${app.frontend-url:http://localhost:3000}") private String frontendUrl;
+
     @GetMapping("/linkedin/auth")
     public ResponseEntity<String> getLinkedInAuthUrl() {
         return communityService.getLinkedInAuthUrl();
     }
 
-    /**
-     * GET /api/v1/community/linkedin/callback?code=...
-     * LinkedIn redirects here after user approves.
-     * Exchanges code, fetches name + photo, saves Community profile.
-     */
+    // Handles: GET /api/v1/community/linkedin/callback  (Option B path)
     @GetMapping("/linkedin/callback")
-    public ResponseEntity<?> linkedInCallback(@RequestParam String code) {
-        return communityService.handleLinkedInCallback(code);
+    public void linkedInCallback(
+            @RequestParam String code,
+            @RequestParam(required = false) String state,  // JWT token
+            HttpServletResponse response) throws IOException {
+        doRedirect(code, state, response);
     }
 
-    /**
-     * PUT /api/v1/community/{id}
-     * User manually fills in role, skills, industry, location.
-     * Body: { "role": "FOUNDER", "skills": "Java,Spring", "industry": "TECH", "location": "Bengaluru" }
-     */
+    private void doRedirect(String code, String state, HttpServletResponse response) throws IOException {
+        try {
+            Long profileId = communityService.handleLinkedInCallbackAndReturnId(code, state);
+            String redirectUrl = frontendUrl + "/community?linkedin=success&profileId=" + profileId;
+            System.out.println("Redirecting to: " + redirectUrl); // ADD THIS
+            response.sendRedirect(redirectUrl);
+        } catch (Exception e) {
+            System.out.println("LinkedIn error: " + e.getMessage()); // ADD THIS
+            e.printStackTrace(); // ADD THIS
+            String err = URLEncoder.encode(
+                    e.getMessage() != null ? e.getMessage() : "LinkedIn failed",
+                    StandardCharsets.UTF_8);
+            response.sendRedirect(frontendUrl + "/community?linkedin_error=" + err);
+        }
+    }
+
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateProfile(
-            @PathVariable Long id,
-            @RequestBody CommunityUpdateRequest request) {
-        return communityService.updateCommunityProfile(id, request);
+    public ResponseEntity<?> updateProfile(@PathVariable Long id, @RequestBody CommunityUpdateRequest req) {
+        return communityService.updateCommunityProfile(id, req);
     }
 
-    /**
-     * GET /api/v1/community/all
-     * Fetch all community profiles for listing page.
-     */
     @GetMapping("/all")
-    public ResponseEntity<?> getAllProfiles() {
-        return communityService.getAllProfiles();
-    }
+    public ResponseEntity<?> getAllProfiles() { return communityService.getAllProfiles(); }
 
-    /**
-     * GET /api/v1/community/{id}
-     * Fetch a single community profile.
-     */
+    @GetMapping("/my")
+    public ResponseEntity<?> getMyProfile() { return communityService.getMyProfile(); }
+
     @GetMapping("/{id}")
-    public ResponseEntity<?> getProfile(@PathVariable Long id) {
-        return communityService.getProfile(id);
-    }
+    public ResponseEntity<?> getProfile(@PathVariable Long id) { return communityService.getProfile(id); }
 }
