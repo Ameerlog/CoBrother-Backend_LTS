@@ -24,6 +24,8 @@ public class Community {
     @Enumerated(EnumType.STRING)
     private CommunityRole role;
 
+    private int views = 0;
+
     private String skills;          // comma-separated: "React, Java, Finance"
 
     @Enumerated(EnumType.STRING)
@@ -88,5 +90,13 @@ public class Community {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public int getViews() {
+        return views;
+    }
+
+    public void setViews(int views) {
+        this.views = views;
     }
 }

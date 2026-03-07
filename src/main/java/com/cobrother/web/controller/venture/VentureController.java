@@ -1,7 +1,9 @@
 package com.cobrother.web.controller.venture;
 
 import com.cobrother.web.Entity.coventure.Venture;
+import com.cobrother.web.Entity.user.AppUser;
 import com.cobrother.web.model.venture.VentureDto;
+import com.cobrother.web.service.analytics.AnalyticsService;
 import com.cobrother.web.service.auth.CurrentUserService;
 import com.cobrother.web.service.venture.VentureService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +22,9 @@ public class VentureController {
 
     @Autowired
     private CurrentUserService currentUserService;
+
+    @Autowired
+    private AnalyticsService analyticsService;
 
     /**
      * GET /api/v1/venture/all
@@ -53,6 +58,11 @@ public class VentureController {
     @GetMapping("/{id}")
     public ResponseEntity<VentureDto> getVenture(@PathVariable long id) {
         Venture v = ventureService.getVentureEntity(id);
+        // ✅ Track view
+        try {
+            AppUser viewer = currentUserService.getCurrentUser();
+            analyticsService.trackVentureView(v, viewer);
+        } catch (Exception ignored) {}
         return ResponseEntity.ok(VentureDto.from(v));
     }
 

@@ -66,6 +66,7 @@ public class SecurityConfig {
                                 "/api/v1/community/linkedin/auth",
                                 "/api/v1/community/linkedin/callback",
                                 "/api/v1/community/all",
+                                "/api/v1/analytics/**",
                                 // ── OAuth2 spring endpoints ───────────────────
                                 "/oauth2/**",
                                 "/login/oauth2/**",

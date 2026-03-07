@@ -194,4 +194,8 @@ public class CommunityService {
         try { return java.net.URLEncoder.encode(s, "UTF-8"); }
         catch (Exception e) { return s; }
     }
+
+    public Optional<Community> getCommunityEntity(Long id) {
+        return communityRepository.findById(id);
+    }
 }

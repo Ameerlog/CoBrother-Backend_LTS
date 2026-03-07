@@ -1,6 +1,10 @@
 package com.cobrother.web.controller.community;
 
+import com.cobrother.web.Entity.user.AppUser;
+import com.cobrother.web.Repository.CommunityRepository;
 import com.cobrother.web.model.community.CommunityUpdateRequest;
+import com.cobrother.web.service.analytics.AnalyticsService;
+import com.cobrother.web.service.auth.CurrentUserService;
 import com.cobrother.web.service.community.CommunityService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +20,17 @@ import java.nio.charset.StandardCharsets;
 @RequestMapping("api/v1/community")
 public class CommunityController {
 
-    @Autowired private CommunityService communityService;
+    @Autowired
+    private CommunityService communityService;
+
+    @Autowired
+    private CommunityRepository communityRepository;
+
+    @Autowired
+    private AnalyticsService analyticsService;
+
+    @Autowired
+    private CurrentUserService currentUserService;
 
     @Value("${app.frontend-url:http://localhost:3000}") private String frontendUrl;
 
@@ -61,6 +75,17 @@ public class CommunityController {
     @GetMapping("/my")
     public ResponseEntity<?> getMyProfile() { return communityService.getMyProfile(); }
 
+
     @GetMapping("/{id}")
-    public ResponseEntity<?> getProfile(@PathVariable Long id) { return communityService.getProfile(id); }
+    public ResponseEntity<?> getProfile(@PathVariable Long id) {
+        return communityRepository.findById(id)
+                .<ResponseEntity<?>>map(profile -> {
+                    try {
+                        AppUser viewer = currentUserService.getCurrentUser();
+                        analyticsService.trackProfileView(profile, viewer);
+                    } catch (Exception ignored) {}
+                    return ResponseEntity.ok(profile);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
 }
