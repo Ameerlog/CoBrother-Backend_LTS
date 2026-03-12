@@ -111,6 +111,13 @@
             <version>1.12.797</version>
             <scope>compile</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.razorpay</groupId>
+            <artifactId>razorpay-java</artifactId>
+            <version>1.4.8</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <build>

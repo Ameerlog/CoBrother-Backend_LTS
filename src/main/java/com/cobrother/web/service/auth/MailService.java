@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -166,6 +167,69 @@ public class MailService {
 
         } catch (MessagingException e) {
             throw new RuntimeException("Failed to send password reset email: " + e.getMessage());
+        }
+    }
+
+    @Async
+    public void sendDomainPurchaseBuyerEmail(String toEmail, String buyerName,
+                                             String domainFullName, double amount,
+                                             String paymentId) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Domain Purchase Confirmed — " + domainFullName);
+
+            String html = "<html><body style='font-family: Arial, sans-serif;'>" +
+                    "<div style='max-width: 600px; margin: 0 auto; padding: 20px;'>" +
+                    "<h2 style='color: #1a1a2e;'>Domain Purchase Confirmed!</h2>" +
+                    "<p>Hi " + buyerName + ",</p>" +
+                    "<p>Your purchase of <strong>" + domainFullName + "</strong> was successful.</p>" +
+                    "<div style='background:#f4f4f4; padding:15px; border-radius:8px; margin:20px 0;'>" +
+                    "<p><strong>Domain:</strong> " + domainFullName + "</p>" +
+                    "<p><strong>Amount Paid:</strong> ₹" + String.format("%.2f", amount) + "</p>" +
+                    "<p><strong>Payment ID:</strong> " + paymentId + "</p>" +
+                    "</div>" +
+                    "<p style='color:#e67e22; font-weight:600;'>⏳ You will be updated within 24 hours with domain transfer details.</p>" +
+                    "<p style='color:#666;'>If you have any questions, please reply to this email.</p>" +
+                    "</div></body></html>";
+
+            helper.setText(html, true);
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Failed to send buyer email: " + e.getMessage());
+        }
+    }
+
+    @Async
+    public void sendDomainPurchaseSellerEmail(String toEmail, String sellerName,
+                                              String domainFullName, String buyerName,
+                                              double amount) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Your Domain Was Purchased — " + domainFullName);
+
+            String html = "<html><body style='font-family: Arial, sans-serif;'>" +
+                    "<div style='max-width: 600px; margin: 0 auto; padding: 20px;'>" +
+                    "<h2 style='color: #1a1a2e;'>Your Domain Has Been Sold! 🎉</h2>" +
+                    "<p>Hi " + sellerName + ",</p>" +
+                    "<p><strong>" + domainFullName + "</strong> was purchased by <strong>" + buyerName + "</strong>.</p>" +
+                    "<div style='background:#f4f4f4; padding:15px; border-radius:8px; margin:20px 0;'>" +
+                    "<p><strong>Domain:</strong> " + domainFullName + "</p>" +
+                    "<p><strong>Sale Amount:</strong> ₹" + String.format("%.2f", amount) + "</p>" +
+                    "<p><strong>Buyer:</strong> " + buyerName + "</p>" +
+                    "</div>" +
+                    "<p style='color:#e67e22; font-weight:600;'>Please initiate the domain transfer within 24 hours.</p>" +
+                    "</div></body></html>";
+
+            helper.setText(html, true);
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Failed to send seller email: " + e.getMessage());
         }
     }
 }

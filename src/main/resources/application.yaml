@@ -67,3 +67,7 @@ cloud:
       region: ap-south-1
     venture:
       images-bucket: cobrother-storage
+
+razorpay:
+  key-id: rzp_test_SQN5WUSMW35meT
+  key-secret: NcccbwDMc0m3QF9wVGAh0lt0

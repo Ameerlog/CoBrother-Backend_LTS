@@ -4,6 +4,8 @@ import com.cobrother.web.Entity.user.AppUser;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
+
 /**
  * CoVenture with a UNIQUE constraint on (venture_id, applicant_user_id).
  * Three-layer duplicate prevention:
@@ -48,6 +50,25 @@ public class CoVenture {
     @Column(columnDefinition = "TEXT")
     private String description;   // how the applicant can help
 
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
+
+    // Lifecycle — add before the no-arg constructor
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "applicant_user_id", nullable = false)
     @JsonIgnoreProperties({
@@ -85,4 +106,20 @@ public class CoVenture {
 
     public String getDescription() { return description; }
     public void setDescription(String v) { this.description = v; }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 }

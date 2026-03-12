@@ -34,6 +34,9 @@ public class Community {
     // add this field
     private LocalDateTime createdAt;
 
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
+
     private String location;        // e.g. "Bengaluru, India"
 
     @Column(columnDefinition = "TEXT")
@@ -55,7 +58,14 @@ public class Community {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
     }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
     // ── Getters & Setters ─────────────────────────────────────────────────────
     public Long getId()                        { return id; }
     public void setId(Long id)                 { this.id = id; }
@@ -106,4 +116,9 @@ public class Community {
 
     public String getWhyImHere() { return whyImHere; }
     public void setWhyImHere(String v) { this.whyImHere = v; }
+
+
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
 }

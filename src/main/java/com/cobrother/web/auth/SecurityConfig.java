@@ -70,6 +70,7 @@ public class SecurityConfig {
                                 // ── OAuth2 spring endpoints ───────────────────
                                 "/oauth2/**",
                                 "/login/oauth2/**",
+                                "/api/v1/domain/all",
                                 // ── Public listings ───────────────────────────
                                 "/api/v1/venture/all",
                                 "/api/v1/community/all",
