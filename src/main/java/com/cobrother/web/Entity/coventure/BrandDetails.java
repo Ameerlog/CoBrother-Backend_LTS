@@ -13,16 +13,16 @@ public class BrandDetails{
     @Enumerated(EnumType.STRING)
     private Industry industry;
     private Long dealValue;        // ₹5,00,000
-    private String logoUrl;
+    private String ventureImageUrl;
     @Enumerated(EnumType.STRING)
     public VentureType ventureType;
 
-    public String getLogoUrl() {
-        return logoUrl;
+    public String getVentureImageUrl() {
+        return ventureImageUrl;
     }
 
-    public void setLogoUrl(String logoUrl) {
-        this.logoUrl = logoUrl;
+    public void setVentureImageUrl(String logoUrl) {
+        this.ventureImageUrl = logoUrl;
     }
 
     public String getDescription() {

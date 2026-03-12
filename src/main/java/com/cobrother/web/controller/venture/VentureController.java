@@ -3,14 +3,18 @@ package com.cobrother.web.controller.venture;
 import com.cobrother.web.Entity.coventure.Venture;
 import com.cobrother.web.Entity.user.AppUser;
 import com.cobrother.web.model.venture.VentureDto;
+import com.cobrother.web.service.S3Service;
 import com.cobrother.web.service.analytics.AnalyticsService;
 import com.cobrother.web.service.auth.CurrentUserService;
 import com.cobrother.web.service.venture.VentureService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -26,6 +30,8 @@ public class VentureController {
     @Autowired
     private AnalyticsService analyticsService;
 
+    @Autowired
+    private S3Service s3Service;
     /**
      * GET /api/v1/venture/all
      * Returns all ventures as safe DTOs (no circular references)
@@ -52,9 +58,6 @@ public class VentureController {
         return ResponseEntity.ok(dtos);
     }
 
-    /**
-     * GET /api/v1/venture/{id}
-     */
     @GetMapping("/{id}")
     public ResponseEntity<VentureDto> getVenture(@PathVariable long id) {
         Venture v = ventureService.getVentureEntity(id);
@@ -92,5 +95,40 @@ public class VentureController {
     public ResponseEntity<Void> deleteVenture(@PathVariable long id) {
         ventureService.deleteVenture(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/image")
+    public ResponseEntity<?> uploadVentureImage(
+            @PathVariable long id,
+            @RequestParam("file") MultipartFile file) {
+
+        Venture venture = ventureService.getVentureEntity(id);
+
+        // Only owner can upload
+        AppUser current = currentUserService.getCurrentUser();
+        if (!venture.getListedBy().getId().equals(current.getId())) {
+            return ResponseEntity.status(403).body("Not authorized");
+        }
+
+        // Validate file type
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            return ResponseEntity.badRequest().body("Only image files are allowed");
+        }
+
+        // Delete old image if exists
+        if (venture.getBrandDetails() != null
+                && venture.getBrandDetails().getVentureImageUrl() != null) {
+            s3Service.deleteVentureImage(venture.getBrandDetails().getVentureImageUrl());
+        }
+
+        try {
+            String imageUrl = s3Service.uploadVentureImage(file, id);
+            venture.getBrandDetails().setVentureImageUrl(imageUrl);
+            ventureService.addVentureEntity(venture);
+            return ResponseEntity.ok(Map.of("ventureImageUrl", imageUrl));
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().body("Upload failed: " + e.getMessage());
+        }
     }
 }

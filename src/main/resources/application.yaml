@@ -13,7 +13,7 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
 
   mail:
     username: vittalkatwe@gmail.com
@@ -57,3 +57,13 @@ linkedin:
   client-id: 77kepiwbqxdlhh
   client-secret: WPL_AP1.vWPcBMBGJzvjKsb8.D2EVtw==
   redirect-uri: http://localhost:8080/api/v1/community/linkedin/callback
+
+
+cloud:
+  aws:
+    credentials:
+      access-key: AKIATH22YZ4Z4EVCPNV2
+      secret-key: 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
+      region: ap-south-1
+    venture:
+      images-bucket: cobrother-storage

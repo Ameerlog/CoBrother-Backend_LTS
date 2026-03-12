@@ -1,4 +1,4 @@
-package com.cobrother.web.service.profile;
+package com.cobrother.web.service;
 
 import com.cobrother.web.Entity.user.AppUser;
 import com.cobrother.web.Repository.UserRepository;

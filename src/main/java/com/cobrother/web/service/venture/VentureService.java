@@ -37,12 +37,30 @@ public class VentureService {
         return ventureRepository.save(venture);
     }
 
+
+
     public Venture updateVentureEntity(long id, Venture incoming) {
         Venture existing = getVentureEntity(id);
+
+        // Preserve the S3 image URL — never overwrite from form PUT
+        String existingImageUrl = existing.getBrandDetails() != null
+                ? existing.getBrandDetails().getVentureImageUrl()
+                : null;
+
         existing.setBrandDetails(incoming.getBrandDetails());
         existing.setContactInfo(incoming.getContactInfo());
         existing.setAgreement(incoming.getAgreement());
         existing.setStatus(incoming.isStatus());
+        existing.setStage(incoming.getStage());
+        existing.setLookingFor(incoming.getLookingFor());
+        existing.setCurrentProblem(incoming.getCurrentProblem());
+
+        // Restore image URL after overwrite
+        if (existing.getBrandDetails() != null && existingImageUrl != null) {
+            existing.getBrandDetails().setVentureImageUrl(existingImageUrl);
+        }
+
+
         return ventureRepository.save(existing);
     }
 

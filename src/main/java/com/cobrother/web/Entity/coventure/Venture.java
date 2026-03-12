@@ -60,8 +60,6 @@ public class Venture {
     @JsonIgnoreProperties("venture")
     private List<CoVenture> coVentureApplications = new ArrayList<>();
 
-    // ── Getters & Setters ────────────────────────────────────────────────────
-
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -78,18 +76,23 @@ public class Venture {
     public void setStatus(boolean status) { this.status = status; }
 
     public AppUser getListedBy() { return listedBy; }
+
     public void setListedBy(AppUser listedBy) { this.listedBy = listedBy; }
 
     public AppUser getPurchasedBy() { return purchasedBy; }
+
     public void setPurchasedBy(AppUser purchasedBy) { this.purchasedBy = purchasedBy; }
 
     public long getViews() { return views; }
+
     public void setViews(long views) { this.views = views; }
 
     public long getCoVentureApplicationCount() { return coVentureApplicationCount; }
+
     public void setCoVentureApplicationCount(long count) { this.coVentureApplicationCount = count; }
 
     public List<CoVenture> getCoVentureApplications() { return coVentureApplications; }
+
     public void setCoVentureApplications(List<CoVenture> coVentureApplications) {
         this.coVentureApplications = coVentureApplications;
     }

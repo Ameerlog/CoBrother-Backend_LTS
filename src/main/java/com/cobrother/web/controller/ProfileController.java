@@ -1,7 +1,7 @@
 package com.cobrother.web.controller;
 
 import com.cobrother.web.model.profile.ProfileUpdateRequest;
-import com.cobrother.web.service.profile.ProfileService;
+import com.cobrother.web.service.ProfileService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
