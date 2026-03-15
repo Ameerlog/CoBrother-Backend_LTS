@@ -9,6 +9,7 @@ public class CommunityUpdateRequest {
     private CommunityIndustry industry;
     private String location;
     private String whyImHere;
+    private String linkedInProfileUrl;
 
     public CommunityRole     getRole()                    { return role; }
     public void              setRole(CommunityRole v)     { this.role = v; }
@@ -25,5 +26,13 @@ public class CommunityUpdateRequest {
 
     public void setWhyImHere(String whyImHere) {
         this.whyImHere = whyImHere;
+    }
+
+    public String getLinkedInProfileUrl() {
+        return linkedInProfileUrl;
+    }
+
+    public void setLinkedInProfileUrl(String linkedInProfileUrl) {
+        this.linkedInProfileUrl = linkedInProfileUrl;
     }
 }

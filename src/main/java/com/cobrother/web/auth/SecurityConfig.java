@@ -71,6 +71,7 @@ public class SecurityConfig {
                                 "/oauth2/**",
                                 "/login/oauth2/**",
                                 "/api/v1/domain/all",
+                                "/api/v1/cocreation/all",   // add after "/api/v1/domain/all"
                                 // ── Public listings ───────────────────────────
                                 "/api/v1/venture/all",
                                 "/api/v1/community/all",
@@ -84,6 +85,7 @@ public class SecurityConfig {
                                 "/error"
                         ).permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/cobrother/**").hasRole("COBROTHER")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

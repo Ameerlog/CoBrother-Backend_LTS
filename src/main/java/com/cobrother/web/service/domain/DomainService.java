@@ -4,6 +4,7 @@ import com.cobrother.web.Entity.cobranding.*;
 import com.cobrother.web.Entity.user.AppUser;
 import com.cobrother.web.Repository.DomainRepository;
 import com.cobrother.web.service.auth.MailService;
+import com.cobrother.web.service.notification.NotificationService;
 import com.razorpay.Order;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
@@ -16,6 +17,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class DomainService {
@@ -31,6 +34,9 @@ public class DomainService {
 
     @Value("${razorpay.key-secret}")
     private String razorpayKeySecret;
+
+    @Autowired
+    private NotificationService notificationService;
 
     public ResponseEntity<Domain> getDomain(long id) {
         try {
@@ -52,14 +58,72 @@ public class DomainService {
         return ResponseEntity.ok(domainRepository.findByPurchasedBy(user));
     }
 
-    public ResponseEntity<Domain> addDomain(Domain domain) {
+    public ResponseEntity<?> addDomain(Domain domain, AppUser lister) {
         try {
+            String name = domain.getDomainName();
+            String ext  = domain.getDomainExtension();
+
+            // ── 1. Check for active listing of same domain by anyone ─────────────
+            Optional<Domain> activeListing = domainRepository
+                    .findByDomainNameAndDomainExtensionAndStatusTrue(name, ext);
+
+            if (activeListing.isPresent()) {
+                Domain existing = activeListing.get();
+                // Same user trying to re-list their own active domain
+                if (existing.getListedBy().getId().equals(lister.getId())) {
+                    return ResponseEntity.badRequest().body(Map.of(
+                            "error", "You already have an active listing for " + name + ext +
+                                    ". If you want to re-list it, please take the existing listing down first."
+                    ));
+                }
+                // Different user trying to list an actively listed domain
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", name + ext + " is already listed by another seller."
+                ));
+            }
+
+            // ── 2. Check cooldown for sold domains (2 days) ──────────────────────
+            List<Domain> soldListings = domainRepository
+                    .findByDomainNameAndDomainExtension(name, ext)
+                    .stream()
+                    .filter(d -> d.getDomainStatus() == DomainStatus.SOLD && d.getSoldAt() != null)
+                    .collect(java.util.stream.Collectors.toList());
+
+            if (!soldListings.isEmpty()) {
+                Domain lastSold = soldListings.stream()
+                        .max(java.util.Comparator.comparing(Domain::getSoldAt))
+                        .orElse(null);
+                if (lastSold != null) {
+                    LocalDateTime cooldownEnds = lastSold.getSoldAt().plusDays(2);
+                    if (LocalDateTime.now().isBefore(cooldownEnds)) {
+                        long hoursLeft = java.time.Duration.between(
+                                LocalDateTime.now(), cooldownEnds).toHours();
+                        return ResponseEntity.badRequest().body(Map.of(
+                                "error", name + ext + " was recently sold. It can be re-listed in " +
+                                        hoursLeft + " hours."
+                        ));
+                    }
+                }
+            }
+
+            // ── 3. Check if domain is already verified by someone else ───────────
+            // If the same domain was previously verified by a different user,
+            // the new lister must re-verify (don't carry over old verification)
+            domain.setListedBy(lister);
             domain.setStatus(true);
             domain.setDomainStatus(DomainStatus.AVAILABLE);
+            domain.setVerified(false);
+            domain.setVerifiedAt(null);
+            domain.setVerificationMethod(null);
+            domain.setWhoisEmail(null);
+            domain.setVerificationToken(
+                    "cobrother-verify=" + UUID.randomUUID().toString().replace("-", "")
+            );
             return ResponseEntity.ok(domainRepository.save(domain));
+
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(Map.of("error", "Failed to list domain."));
         }
     }
 
@@ -175,6 +239,12 @@ public class DomainService {
             domain.setPurchasedBy(buyer);
             domainRepository.save(domain);
 
+            notificationService.notifyDomainSold(
+                    domain.getListedBy(),
+                    domain.getDomainName() + domain.getDomainExtension(),
+                    buyer.getFirstname() + " " + buyer.getLastname()
+            );
+
             // Send emails
             mailService.sendDomainPurchaseBuyerEmail(
                     buyer.getEmail(),
@@ -226,4 +296,6 @@ public class DomainService {
         for (byte b : hash) hexString.append(String.format("%02x", b));
         return hexString.toString();
     }
+
+
 }

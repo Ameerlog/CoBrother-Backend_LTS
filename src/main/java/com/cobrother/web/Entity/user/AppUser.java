@@ -1,6 +1,7 @@
 package com.cobrother.web.Entity.user;
 
 import com.cobrother.web.Entity.cobranding.Domain;
+import com.cobrother.web.Entity.cocreation.Software;
 import com.cobrother.web.Entity.community.Community;
 import com.cobrother.web.Entity.coventure.CoVenture;
 import com.cobrother.web.Entity.coventure.Venture;
@@ -112,6 +113,15 @@ public class AppUser {
     @OneToMany(mappedBy = "applicant")
     private List<CoVenture> coVenturedVentures;
 
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "listedBy")
+    private List<Software> listedSoftware;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "purchasedBy")
+    private List<Software> purchasedSoftware;
+
     @PrePersist
     public void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -213,4 +223,20 @@ public class AppUser {
 
     public List<CoVenture> getCoVenturedVentures() { return coVenturedVentures; }
     public void setCoVenturedVentures(List<CoVenture> coVenturedVentures) { this.coVenturedVentures = coVenturedVentures; }
+
+    public List<Software> getListedSoftware() {
+        return listedSoftware;
+    }
+
+    public void setListedSoftware(List<Software> listedSoftware) {
+        this.listedSoftware = listedSoftware;
+    }
+
+    public List<Software> getPurchasedSoftware() {
+        return purchasedSoftware;
+    }
+
+    public void setPurchasedSoftware(List<Software> purchasedSoftware) {
+        this.purchasedSoftware = purchasedSoftware;
+    }
 }

@@ -3,6 +3,7 @@ package com.cobrother.web.Entity.cobranding;
 import com.cobrother.web.Entity.coventure.Agreement;
 import com.cobrother.web.Entity.coventure.ContactInfo;
 import com.cobrother.web.Entity.user.AppUser;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
@@ -69,6 +70,20 @@ public class Domain {
     private LocalDateTime updatedAt;
 
     private LocalDateTime soldAt;
+
+    private boolean verified = false;
+
+    // Hidden from API response — only used internally for checking
+    @JsonIgnore
+    private String verificationToken;
+
+    @Enumerated(EnumType.STRING)
+    private VerificationMethod verificationMethod;
+
+    private LocalDateTime verifiedAt;
+
+    // For WHOIS_EMAIL — store the masked email so frontend can show "sent to r***@domain.com"
+    private String whoisEmail;
 
     // Lifecycle — add before the no-arg constructor
     @PrePersist
@@ -143,5 +158,45 @@ public class Domain {
 
     public void setSoldAt(LocalDateTime soldAt) {
         this.soldAt = soldAt;
+    }
+
+    public VerificationMethod getVerificationMethod() {
+        return verificationMethod;
+    }
+
+    public void setVerificationMethod(VerificationMethod verificationMethod) {
+        this.verificationMethod = verificationMethod;
+    }
+
+    public String getVerificationToken() {
+        return verificationToken;
+    }
+
+    public void setVerificationToken(String verificationToken) {
+        this.verificationToken = verificationToken;
+    }
+
+    public boolean isVerified() {
+        return verified;
+    }
+
+    public void setVerified(boolean verified) {
+        this.verified = verified;
+    }
+
+    public LocalDateTime getVerifiedAt() {
+        return verifiedAt;
+    }
+
+    public void setVerifiedAt(LocalDateTime verifiedAt) {
+        this.verifiedAt = verifiedAt;
+    }
+
+    public String getWhoisEmail() {
+        return whoisEmail;
+    }
+
+    public void setWhoisEmail(String whoisEmail) {
+        this.whoisEmail = whoisEmail;
     }
 }

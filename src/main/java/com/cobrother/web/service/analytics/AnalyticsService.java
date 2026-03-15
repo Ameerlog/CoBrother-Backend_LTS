@@ -8,6 +8,7 @@ import com.cobrother.web.Entity.community.Community;
 import com.cobrother.web.Entity.user.AppUser;
 import com.cobrother.web.Repository.*;
 import com.cobrother.web.service.auth.CurrentUserService;
+import com.cobrother.web.service.notification.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +26,8 @@ public class AnalyticsService {
     @Autowired private CoVentureRepository coVentureRepository;
     @Autowired private CommunityRepository communityRepository;
     @Autowired private CurrentUserService currentUserService;
+    @Autowired private NotificationService notificationService;
+
 
     // ── Track a venture view ──────────────────────────────────────────────────
     public void trackVentureView(Venture venture, AppUser viewer) {
@@ -64,6 +67,17 @@ public class AnalyticsService {
         });
 
         profileViewRepository.save(pv);
+
+        if (viewer != null) {
+            String viewerName = viewer.getFirstname() != null
+                    ? viewer.getFirstname() + " " + viewer.getLastname()
+                    : "Someone";
+            notificationService.notifyProfileViewed(
+                    profile.getAppUser(),
+                    viewerName
+            );
+        }
+
         profile.setViews(profile.getViews() + 1);
         communityRepository.save(profile);
     }

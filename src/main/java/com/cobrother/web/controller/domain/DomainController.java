@@ -4,6 +4,7 @@ import com.cobrother.web.Entity.cobranding.Domain;
 import com.cobrother.web.Entity.user.AppUser;
 import com.cobrother.web.service.auth.CurrentUserService;
 import com.cobrother.web.service.domain.DomainService;
+import com.cobrother.web.service.domain.DomainVerificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +21,10 @@ public class DomainController {
 
     @Autowired
     private CurrentUserService currentUserService;
+
+    @Autowired
+    private DomainVerificationService domainVerificationService;
+
 
     @GetMapping("/all")
     public ResponseEntity<List<Domain>> getAllDomains() {
@@ -42,9 +47,8 @@ public class DomainController {
     }
 
     @PostMapping
-    public ResponseEntity<Domain> addDomain(@RequestBody Domain domain) {
-        domain.setListedBy(currentUserService.getCurrentUser());
-        return domainService.addDomain(domain);
+    public ResponseEntity<?> addDomain(@RequestBody Domain domain) {
+        return domainService.addDomain(domain, currentUserService.getCurrentUser());
     }
 
     @PutMapping("/{id}")
@@ -83,5 +87,20 @@ public class DomainController {
     @PostMapping("/{id}/purchase/failure")
     public ResponseEntity<?> handleFailure(@PathVariable long id) {
         return domainService.handlePaymentFailure(id);
+    }
+
+    @PostMapping("/{id}/verify/init")
+    public ResponseEntity<?> initVerification(
+            @PathVariable long id,
+            @RequestParam String method) {
+        return domainVerificationService.initVerification(id, method, currentUserService.getCurrentUser());
+    }
+
+    @PostMapping("/{id}/verify/check")
+    public ResponseEntity<?> checkVerification(
+            @PathVariable long id,
+            @RequestBody(required = false) Map<String, String> body) {
+        String otpCode = body != null ? body.get("code") : null;
+        return domainVerificationService.checkVerification(id, otpCode, currentUserService.getCurrentUser());
     }
 }

@@ -1,0 +1,11 @@
+package com.cobrother.web.Entity.notification;
+
+public enum NotificationType {
+    COVENTURE_APPLICATION_RECEIVED,
+    COVENTURE_APPLICATION_STATUS_CHANGED,
+    DOMAIN_SOLD,
+    SOFTWARE_PURCHASED,
+    SOFTWARE_MARKED_COMPLETE,
+    PROFILE_VIEWED,
+    NEW_LISTING_IN_INDUSTRY
+}

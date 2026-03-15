@@ -22,9 +22,14 @@ import java.util.Optional;
 @Service
 public class CommunityService {
 
-    @Value("${linkedin.client-id}")       private String clientId;
-    @Value("${linkedin.client-secret}")   private String clientSecret;
-    @Value("${linkedin.redirect-uri}")    private String redirectUri;
+    @Value("${linkedin.client-id}")
+    private String clientId;
+
+    @Value("${linkedin.client-secret}")
+    private String clientSecret;
+
+    @Value("${linkedin.redirect-uri}")
+    private String redirectUri;
 
     @Autowired private JwtService jwtService;
     @Autowired private UserDetailsServiceImpl userDetailsService;
@@ -55,8 +60,7 @@ public class CommunityService {
 
         String firstName = (String) info.getOrDefault("given_name", "");
         String lastName  = (String) info.getOrDefault("family_name", "");
-        String profileUrl = "https://www.linkedin.com/search/results/people/?firstName="
-                + encode(firstName) + "&lastName=" + encode(lastName);
+        String profileUrl = null;
 
         String email = java.net.URLDecoder.decode(state, StandardCharsets.UTF_8);
         AppUser me = userDetailsService.getUserByEmail(email);
@@ -142,6 +146,7 @@ public class CommunityService {
         if (req.getIndustry() != null) c.setIndustry(req.getIndustry());
         if (req.getLocation() != null) c.setLocation(req.getLocation());
         if (req.getWhyImHere() !=null) c.setWhyImHere(req.getWhyImHere());
+        if (req.getLinkedInProfileUrl() != null) c.setLinkedInProfileUrl(req.getLinkedInProfileUrl());
         return ResponseEntity.ok(communityRepository.save(c));
     }
 

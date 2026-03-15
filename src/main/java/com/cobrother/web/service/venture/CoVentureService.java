@@ -7,6 +7,7 @@ import com.cobrother.web.Entity.user.AppUser;
 import com.cobrother.web.Repository.CoVentureRepository;
 import com.cobrother.web.Repository.VentureRepository;
 import com.cobrother.web.service.auth.CurrentUserService;
+import com.cobrother.web.service.notification.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,9 @@ public class CoVentureService {
 
     @Autowired
     private CurrentUserService currentUserService;
+
+    @Autowired
+    private NotificationService notificationService;
 
     /**
      * Apply to co-venture into a listed venture.
@@ -72,6 +76,12 @@ public class CoVentureService {
             application.setStatus(CoVentureStatus.PENDING);
 
             CoVenture saved = coVentureRepository.save(application);
+            notificationService.notifyCoVentureApplicationReceived(
+                    saved.getVenture().getListedBy(),
+                    application.getFullName(),
+                    saved.getVenture().getBrandDetails().getBrandName(),
+                    saved.getVenture().getId()
+            );
 
             // Increment the application counter on the venture
             venture.setCoVentureApplicationCount(venture.getCoVentureApplicationCount() + 1);

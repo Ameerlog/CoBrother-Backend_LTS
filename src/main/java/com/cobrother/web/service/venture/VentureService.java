@@ -4,6 +4,7 @@ import com.cobrother.web.Entity.coventure.Venture;
 import com.cobrother.web.Entity.user.AppUser;
 import com.cobrother.web.Repository.VentureRepository;
 import com.cobrother.web.service.auth.CurrentUserService;
+import com.cobrother.web.service.notification.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,10 @@ public class VentureService {
 
     @Autowired
     private CurrentUserService currentUserService;
+
+    @Autowired
+    private NotificationService notificationService;
+
 
     public List<Venture> getAllVentures() {
         return ventureRepository.findAll();
@@ -34,6 +39,16 @@ public class VentureService {
     }
 
     public Venture addVentureEntity(Venture venture) {
+        if (venture.getBrandDetails().getIndustry() != null) {
+            notificationService.notifyIndustryUsersOfNewListing(
+                    venture.getBrandDetails().getIndustry().name(),
+                    venture.getBrandDetails().getBrandName(),
+                    "Venture",
+                    "/ventures",
+                    venture.getListedBy()
+            );
+        }
+
         return ventureRepository.save(venture);
     }
 
