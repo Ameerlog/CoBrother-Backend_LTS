@@ -66,6 +66,12 @@ public class Software {
     private Agreement agreement;
 
 
+    private boolean takenDown = false;
+
+    @Column(columnDefinition = "TEXT")
+    private String takeDownReason;
+
+
     private boolean official = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -190,5 +196,21 @@ public class Software {
 
     public void setOfficial(boolean official) {
         this.official = official;
+    }
+
+    public String getTakeDownReason() {
+        return takeDownReason;
+    }
+
+    public void setTakeDownReason(String takeDownReason) {
+        this.takeDownReason = takeDownReason;
+    }
+
+    public boolean isTakenDown() {
+        return takenDown;
+    }
+
+    public void setTakenDown(boolean takenDown) {
+        this.takenDown = takenDown;
     }
 }

@@ -85,6 +85,12 @@ public class Domain {
     // For WHOIS_EMAIL — store the masked email so frontend can show "sent to r***@domain.com"
     private String whoisEmail;
 
+
+    private boolean takenDown = false;
+
+    @Column(columnDefinition = "TEXT")
+    private String takeDownReason;
+
     // Lifecycle — add before the no-arg constructor
     @PrePersist
     protected void onCreate() {
@@ -198,5 +204,21 @@ public class Domain {
 
     public void setWhoisEmail(String whoisEmail) {
         this.whoisEmail = whoisEmail;
+    }
+
+    public String getTakeDownReason() {
+        return takeDownReason;
+    }
+
+    public void setTakeDownReason(String takeDownReason) {
+        this.takeDownReason = takeDownReason;
+    }
+
+    public boolean isTakenDown() {
+        return takenDown;
+    }
+
+    public void setTakenDown(boolean takenDown) {
+        this.takenDown = takenDown;
     }
 }

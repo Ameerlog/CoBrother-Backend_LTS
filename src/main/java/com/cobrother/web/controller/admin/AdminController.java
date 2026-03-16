@@ -63,4 +63,26 @@ public class AdminController {
         software.setOfficial(true); // marked as official
         return softwareService.create(software);
     }
+
+    @GetMapping("/domain-enquiries")
+    public ResponseEntity<?> getDomainEnquiries() {
+        return adminService.getAllDomainEnquiries();
+    }
+
+    @PostMapping("/takedown")
+    public ResponseEntity<?> takeDown(@RequestBody Map<String, String> body) {
+        return adminService.takeDownListing(
+                body.get("type"),
+                Long.valueOf(body.get("entityId")),
+                body.getOrDefault("reason", "")
+        );
+    }
+
+    @PostMapping("/restore")
+    public ResponseEntity<?> restore(@RequestBody Map<String, String> body) {
+        return adminService.restoreListing(
+                body.get("type"),
+                Long.valueOf(body.get("entityId"))
+        );
+    }
 }

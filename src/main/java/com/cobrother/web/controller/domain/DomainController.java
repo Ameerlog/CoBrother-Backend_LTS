@@ -33,7 +33,7 @@ public class DomainController {
 
     @GetMapping("/my-listings")
     public ResponseEntity<List<Domain>> getMyListings() {
-        return domainService.getMyListedDomains(currentUserService.getCurrentUser());
+        return domainService.getMyListedDomainsAll(currentUserService.getCurrentUser());
     }
 
     @GetMapping("/my-purchases")
@@ -50,6 +50,8 @@ public class DomainController {
     public ResponseEntity<?> addDomain(@RequestBody Domain domain) {
         return domainService.addDomain(domain, currentUserService.getCurrentUser());
     }
+
+
 
     @PutMapping("/{id}")
     public ResponseEntity<Domain> updateDomain(@PathVariable long id, @RequestBody Domain domain) {

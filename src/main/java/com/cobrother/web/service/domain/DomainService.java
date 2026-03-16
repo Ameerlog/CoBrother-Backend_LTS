@@ -50,7 +50,9 @@ public class DomainService {
         return ResponseEntity.ok(domainRepository.findByStatusTrue());
     }
 
-    public ResponseEntity<List<Domain>> getMyListedDomains(AppUser user) {
+    // Add a new endpoint for "my listings including taken down"
+    public ResponseEntity<List<Domain>> getMyListedDomainsAll(AppUser user) {
+        // Returns all including taken down — for lister's own dashboard view
         return ResponseEntity.ok(domainRepository.findByListedBy(user));
     }
 
@@ -63,26 +65,37 @@ public class DomainService {
             String name = domain.getDomainName();
             String ext  = domain.getDomainExtension();
 
-            // ── 1. Check for active listing of same domain by anyone ─────────────
-            Optional<Domain> activeListing = domainRepository
-                    .findByDomainNameAndDomainExtensionAndStatusTrue(name, ext);
+            // ── 1. Check for active verified listing of same domain by anyone ─────────────
 
-            if (activeListing.isPresent()) {
-                Domain existing = activeListing.get();
-                // Same user trying to re-list their own active domain
-                if (existing.getListedBy().getId().equals(lister.getId())) {
-                    return ResponseEntity.badRequest().body(Map.of(
-                            "error", "You already have an active listing for " + name + ext +
-                                    ". If you want to re-list it, please take the existing listing down first."
-                    ));
-                }
-                // Different user trying to list an actively listed domain
+            Optional<Domain> verifiedListing = domainRepository
+                    .findByDomainNameAndDomainExtensionAndStatusTrue(name, ext)
+                    .stream()
+                    // filter to only verified ones
+                    .filter(Domain::isVerified)
+                    .findFirst();
+
+            Optional<Domain> ownActiveListing = domainRepository
+                    .findByDomainNameAndDomainExtensionAndStatusTrue(name, ext)
+                    .stream()
+                    .filter(d -> d.getListedBy().getId().equals(lister.getId()))
+                    .findFirst();
+
+
+            if (ownActiveListing.isPresent()) {
                 return ResponseEntity.badRequest().body(Map.of(
-                        "error", name + ext + " is already listed by another seller."
+                        "error", "You already have an active listing for " + name + ext +
+                                ". Take it down before re-listing."
+                ));
+            }
+
+            if (verifiedListing.isPresent()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", name + ext + " is already listed and verified by another seller."
                 ));
             }
 
             // ── 2. Check cooldown for sold domains (2 days) ──────────────────────
+            // ── 2. Cooldown + previous seller restriction ─────────────────────────────
             List<Domain> soldListings = domainRepository
                     .findByDomainNameAndDomainExtension(name, ext)
                     .stream()
@@ -94,18 +107,24 @@ public class DomainService {
                         .max(java.util.Comparator.comparing(Domain::getSoldAt))
                         .orElse(null);
                 if (lastSold != null) {
+                    // Previous seller cannot re-list
+                    if (lastSold.getListedBy().getId().equals(lister.getId())) {
+                        return ResponseEntity.badRequest().body(Map.of(
+                                "error", "As the previous seller, you cannot re-list " + name + ext + "."
+                        ));
+                    }
+                    // 2-day cooldown for everyone else
                     LocalDateTime cooldownEnds = lastSold.getSoldAt().plusDays(2);
                     if (LocalDateTime.now().isBefore(cooldownEnds)) {
                         long hoursLeft = java.time.Duration.between(
                                 LocalDateTime.now(), cooldownEnds).toHours();
                         return ResponseEntity.badRequest().body(Map.of(
-                                "error", name + ext + " was recently sold. It can be re-listed in " +
-                                        hoursLeft + " hours."
+                                "error", name + ext + " was recently sold. Re-listing opens in " +
+                                        hoursLeft + " hour" + (hoursLeft != 1 ? "s" : "") + "."
                         ));
                     }
                 }
             }
-
             // ── 3. Check if domain is already verified by someone else ───────────
             // If the same domain was previously verified by a different user,
             // the new lister must re-verify (don't carry over old verification)

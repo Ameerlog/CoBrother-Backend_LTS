@@ -1,11 +1,14 @@
 package com.cobrother.web.service.admin;
 
 import com.cobrother.web.Entity.cobranding.Domain;
+import com.cobrother.web.Entity.cobranding.DomainEnquiry;
+import com.cobrother.web.Entity.cobranding.DomainEnquiryStatus;
 import com.cobrother.web.Entity.cobrother.CoBrotherRequest;
 import com.cobrother.web.Entity.cobrother.CoBrotherRequestStatus;
 import com.cobrother.web.Entity.cobrother.RequestType;
 import com.cobrother.web.Entity.cocreation.Software;
 import com.cobrother.web.Entity.coventure.CoVenture;
+import com.cobrother.web.Entity.coventure.Venture;
 import com.cobrother.web.Entity.user.AppUser;
 import com.cobrother.web.Entity.user.UserRole;
 import com.cobrother.web.Repository.*;
@@ -35,6 +38,8 @@ public class AdminService {
     @Autowired private CurrentUserService currentUserService;
     @Autowired private MailService mailService;
     @Autowired private NotificationService notificationService;
+    @Autowired private DomainEnquiryRepository domainEnquiryRepository;
+    @Autowired private VentureRepository ventureRepository;
 
     @Value("${razorpay.key-id}")
     private String razorpayKeyId;
@@ -63,6 +68,12 @@ public class AdminService {
     public ResponseEntity<?> getAllCoBrothers() {
         return ResponseEntity.ok(userRepository.findByRole(UserRole.COBROTHER));
     }
+
+    public ResponseEntity<?> getAllDomains() {
+        // Admin sees ALL domains including taken down — not just status=true
+        return ResponseEntity.ok(domainRepository.findAll());
+    }
+
 
     // ── Forward request to CoBrother ─────────────────────────────────────────
     public ResponseEntity<?> forwardToCoBrother(Long entityId, String type,
@@ -163,6 +174,30 @@ public class AdminService {
                     request.setEntityTitle(sw.getName());
                     request.setEntityDetails("{\"type\":\"Software\",\"price\":" + sw.getPrice() + "}");
                 }
+                // Add new case in the RequestType switch:
+                case DOMAIN_ENQUIRY -> {
+                    DomainEnquiry enquiry = domainEnquiryRepository.findById(entityId)
+                            .orElseThrow(() -> new RuntimeException("Enquiry not found"));
+                    lister = enquiry.getDomain().getListedBy();
+                    AppUser enquirer = enquiry.getEnquirer();
+
+                    request.setLister(lister);
+                    request.setListerName(lister.getFirstname() + " " + lister.getLastname());
+                    request.setListerEmail(lister.getEmail());
+                    request.setListerPhone(lister.getPhoneNumber());
+                    request.setApplicantName(enquiry.getFullName());
+                    request.setApplicantEmail(enquiry.getEmail());
+                    request.setApplicantPhone(enquiry.getPhone());
+                    request.setEntityTitle(enquiry.getDomain().getDomainName() +
+                            enquiry.getDomain().getDomainExtension());
+                    request.setEntityDetails("{\"type\":\"DomainEnquiry\",\"message\":\"" +
+                            enquiry.getMessage() + "\",\"price\":" +
+                            enquiry.getDomain().getAskingPrice() + "}");
+
+                    // Mark enquiry as forwarded
+                    enquiry.setStatus(DomainEnquiryStatus.FORWARDED);
+                    domainEnquiryRepository.save(enquiry);
+                }
             }
 
             CoBrotherRequest saved = coBrotherRequestRepository.save(request);
@@ -198,6 +233,13 @@ public class AdminService {
             case COCREATION -> {
                 Software s = softwareRepository.findSoftwareById(entityId);
                 yield s != null ? s.getListedBy() : null;
+            }
+            case DOMAIN_ENQUIRY -> {                          // ✅ add this case
+                DomainEnquiry enquiry = domainEnquiryRepository
+                        .findById(entityId).orElse(null);
+                yield enquiry != null
+                        ? enquiry.getDomain().getListedBy()
+                        : null;
             }
         };
     }
@@ -312,5 +354,89 @@ public class AdminService {
         StringBuilder hex = new StringBuilder();
         for (byte b : hash) hex.append(String.format("%02x", b));
         return hex.toString();
+    }
+
+    public ResponseEntity<?> getAllDomainEnquiries() {
+        return ResponseEntity.ok(domainEnquiryRepository.findAllByOrderByCreatedAtDesc());
+    }
+
+    // ── Take down a listing ───────────────────────────────────────────────────
+    public ResponseEntity<?> takeDownListing(String type, Long entityId, String reason) {
+        try {
+            switch (type.toUpperCase()) {
+                case "VENTURE" -> {
+                    Venture v = ventureRepository.findById(entityId)
+                            .orElseThrow(() -> new RuntimeException("Not found"));
+                    v.setTakenDown(true);
+                    v.setTakeDownReason(reason);
+                    v.setStatus(false); // hide from public listings
+                    ventureRepository.save(v);
+                }
+                case "DOMAIN" -> {
+                    Domain d = domainRepository.getDomainById(entityId);
+                    if (d == null) throw new RuntimeException("Not found");
+                    d.setTakenDown(true);
+                    d.setTakeDownReason(reason);
+                    d.setStatus(false);
+                    domainRepository.save(d);
+                }
+                case "SOFTWARE" -> {
+                    Software s = softwareRepository.findSoftwareById(entityId);
+                    if (s == null) throw new RuntimeException("Not found");
+                    s.setTakenDown(true);
+                    s.setTakeDownReason(reason);
+                    s.setStatus(false);
+                    softwareRepository.save(s);
+                }
+                default -> { return ResponseEntity.badRequest().body("Invalid type"); }
+            }
+
+            // Log audit trail
+            logAdminAction("TAKEDOWN", type + " #" + entityId + " — " + reason);
+
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // ── Restore a taken-down listing ──────────────────────────────────────────
+    public ResponseEntity<?> restoreListing(String type, Long entityId) {
+        try {
+            switch (type.toUpperCase()) {
+                case "VENTURE" -> {
+                    Venture v = ventureRepository.findById(entityId)
+                            .orElseThrow(() -> new RuntimeException("Not found"));
+                    v.setTakenDown(false);
+                    v.setTakeDownReason(null);
+                    v.setStatus(true);
+                    ventureRepository.save(v);
+                }
+                case "DOMAIN" -> {
+                    Domain d = domainRepository.getDomainById(entityId);
+                    if (d == null) throw new RuntimeException("Not found");
+                    d.setTakenDown(false);
+                    d.setTakeDownReason(null);
+                    d.setStatus(true);
+                    domainRepository.save(d);
+                }
+                case "SOFTWARE" -> {
+                    Software s = softwareRepository.findSoftwareById(entityId);
+                    if (s == null) throw new RuntimeException("Not found");
+                    s.setTakenDown(false);
+                    s.setTakeDownReason(null);
+                    s.setStatus(true);
+                    softwareRepository.save(s);
+                }
+            }
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // Placeholder — wire to AuditLog when that's built
+    private void logAdminAction(String action, String detail) {
+        System.out.println("[ADMIN ACTION] " + action + ": " + detail);
     }
 }

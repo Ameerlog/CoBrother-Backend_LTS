@@ -56,6 +56,12 @@ public class Venture {
     @Column(columnDefinition = "TEXT")
     private String currentProblem;
 
+
+    private boolean takenDown = false;
+
+    @Column(columnDefinition = "TEXT")
+    private String takeDownReason;
+
     // Break the back-reference loop: don't serialize applications from Venture side
     @OneToMany(mappedBy = "venture", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnoreProperties("venture")
@@ -155,5 +161,21 @@ public class Venture {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getTakeDownReason() {
+        return takeDownReason;
+    }
+
+    public void setTakeDownReason(String takeDownReason) {
+        this.takeDownReason = takeDownReason;
+    }
+
+    public boolean isTakenDown() {
+        return takenDown;
+    }
+
+    public void setTakenDown(boolean takenDown) {
+        this.takenDown = takenDown;
     }
 }
