@@ -6,7 +6,7 @@ import com.cobrother.web.Entity.user.UserRole;
 import com.cobrother.web.Repository.UserRepository;
 import com.cobrother.web.service.auth.CustomUserDetails;
 import com.cobrother.web.service.auth.OAuth2UserInfo;
-import com.cobrother.web.service.auth.oauth2.OAuth2UserInfoFactory;
+import com.cobrother.web.auth.OAuth2UserInfoFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;

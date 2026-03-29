@@ -118,9 +118,6 @@ public class AppUser {
     @OneToMany(mappedBy = "listedBy")
     private List<Software> listedSoftware;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "purchasedBy")
-    private List<Software> purchasedSoftware;
 
     @PrePersist
     public void onCreate() {
@@ -230,13 +227,5 @@ public class AppUser {
 
     public void setListedSoftware(List<Software> listedSoftware) {
         this.listedSoftware = listedSoftware;
-    }
-
-    public List<Software> getPurchasedSoftware() {
-        return purchasedSoftware;
-    }
-
-    public void setPurchasedSoftware(List<Software> purchasedSoftware) {
-        this.purchasedSoftware = purchasedSoftware;
     }
 }

@@ -27,7 +27,7 @@ public class AdminController {
 
     @GetMapping("/domains")
     public ResponseEntity<?> getAllDomains() {
-        return adminService.getAllDomainPurchases();
+        return adminService.getAllDomains();
     }
 
     @GetMapping("/cocreations")
@@ -64,6 +64,7 @@ public class AdminController {
         return softwareService.create(software);
     }
 
+
     @GetMapping("/domain-enquiries")
     public ResponseEntity<?> getDomainEnquiries() {
         return adminService.getAllDomainEnquiries();
@@ -85,4 +86,6 @@ public class AdminController {
                 Long.valueOf(body.get("entityId"))
         );
     }
+
+
 }

@@ -47,20 +47,12 @@ public class Software {
     @Enumerated(EnumType.STRING)
     private SoftwareStatus softwareStatus = SoftwareStatus.AVAILABLE;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private SoftwarePurchaseType purchaseType = SoftwarePurchaseType.ONE_TIME;
+
     private boolean status = true;  // active/inactive listing
     private long views = 0;
-
-    // Payment
-    private String razorpayOrderId;
-    private String razorpayPaymentId;
-
-    @Enumerated(EnumType.STRING)
-    private SoftwarePaymentStatus paymentStatus;
-
-    @Enumerated(EnumType.STRING)
-    private PurchaseCompletionStatus completionStatus;
-
-    private LocalDateTime soldAt;
 
     @Embedded
     private Agreement agreement;
@@ -82,25 +74,22 @@ public class Software {
             "verificationToken","verificationTokenExpiry","refreshToken","hibernateLazyInitializer"})
     private AppUser listedBy;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "purchased_by_user_id")
-    @JsonIgnoreProperties({"listedDomains","purchasedDomains","listedVentures",
-            "purchasedVentures","coVenturedVentures","communityProfile",
-            "password","otp","otpExpiry","emailOtp","emailOtpExpiry",
-            "verificationToken","verificationTokenExpiry","refreshToken","hibernateLazyInitializer"})
-    private AppUser purchasedBy;
-
-    // Buyer contact details (pre-filled from AppUser, editable)
-    private String buyerFullName;
-    private String buyerEmail;
-    private String buyerPhone;
-
     @OneToMany(mappedBy = "software", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<SoftwareView> softwareViews = new ArrayList<>();
 
+    @OneToMany(mappedBy = "software", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<SoftwarePurchase> purchases = new ArrayList<>();
+
+    // Add a transient field for purchase count (set by service layer)
+    @Transient
+    private long purchaseCount;
+
+
     @Version
     private Long version;
+
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -146,32 +135,16 @@ public class Software {
     public void setPrice(double price) { this.price = price; }
     public SoftwareStatus getSoftwareStatus() { return softwareStatus; }
     public void setSoftwareStatus(SoftwareStatus softwareStatus) { this.softwareStatus = softwareStatus; }
+    public SoftwarePurchaseType getPurchaseType() { return purchaseType; }
+    public void setPurchaseType(SoftwarePurchaseType purchaseType) { this.purchaseType = purchaseType; }
     public boolean isStatus() { return status; }
     public void setStatus(boolean status) { this.status = status; }
     public long getViews() { return views; }
     public void setViews(long views) { this.views = views; }
-    public String getRazorpayOrderId() { return razorpayOrderId; }
-    public void setRazorpayOrderId(String razorpayOrderId) { this.razorpayOrderId = razorpayOrderId; }
-    public String getRazorpayPaymentId() { return razorpayPaymentId; }
-    public void setRazorpayPaymentId(String razorpayPaymentId) { this.razorpayPaymentId = razorpayPaymentId; }
-    public SoftwarePaymentStatus getPaymentStatus() { return paymentStatus; }
-    public void setPaymentStatus(SoftwarePaymentStatus paymentStatus) { this.paymentStatus = paymentStatus; }
-    public PurchaseCompletionStatus getCompletionStatus() { return completionStatus; }
-    public void setCompletionStatus(PurchaseCompletionStatus completionStatus) { this.completionStatus = completionStatus; }
-    public LocalDateTime getSoldAt() { return soldAt; }
-    public void setSoldAt(LocalDateTime soldAt) { this.soldAt = soldAt; }
     public Agreement getAgreement() { return agreement; }
     public void setAgreement(Agreement agreement) { this.agreement = agreement; }
     public AppUser getListedBy() { return listedBy; }
     public void setListedBy(AppUser listedBy) { this.listedBy = listedBy; }
-    public AppUser getPurchasedBy() { return purchasedBy; }
-    public void setPurchasedBy(AppUser purchasedBy) { this.purchasedBy = purchasedBy; }
-    public String getBuyerFullName() { return buyerFullName; }
-    public void setBuyerFullName(String buyerFullName) { this.buyerFullName = buyerFullName; }
-    public String getBuyerEmail() { return buyerEmail; }
-    public void setBuyerEmail(String buyerEmail) { this.buyerEmail = buyerEmail; }
-    public String getBuyerPhone() { return buyerPhone; }
-    public void setBuyerPhone(String buyerPhone) { this.buyerPhone = buyerPhone; }
     public List<SoftwareView> getSoftwareViews() { return softwareViews; }
     public void setSoftwareViews(List<SoftwareView> softwareViews) { this.softwareViews = softwareViews; }
     public Long getVersion() { return version; }
@@ -212,5 +185,21 @@ public class Software {
 
     public void setTakenDown(boolean takenDown) {
         this.takenDown = takenDown;
+    }
+
+    public long getPurchaseCount() {
+        return purchaseCount;
+    }
+
+    public void setPurchaseCount(long purchaseCount) {
+        this.purchaseCount = purchaseCount;
+    }
+
+    public List<SoftwarePurchase> getPurchases() {
+        return purchases;
+    }
+
+    public void setPurchases(List<SoftwarePurchase> purchases) {
+        this.purchases = purchases;
     }
 }

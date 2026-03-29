@@ -2,6 +2,7 @@ package com.cobrother.web.auth;
 
 import com.cobrother.web.auth.CustomOAuth2UserService;
 import com.cobrother.web.service.auth.UserDetailsServiceImpl;
+import org.apache.http.auth.UsernamePasswordCredentials;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -77,12 +78,17 @@ public class SecurityConfig {
                                 "/api/v1/community/all",
                                 "/api/v1/community/linkedin/auth",
                                 "/api/v1/community/linkedin/callback",
+                                "/api/v1/auction/domain/**",  // public auction viewing
+                                "/api/v1/auction/*/bids",     // public bid history
+                                "/ws/**",
                                 // ── Infra ─────────────────────────────────────
                                 "/api/v1/services/public/**",
                                 "/actuator/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/error"
+                                "/api/v1/auction/active",
+                                "/error",
+                                "/public/api/v1/**"
                         ).permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/cobrother/**").hasRole("COBROTHER")

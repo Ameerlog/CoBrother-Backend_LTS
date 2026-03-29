@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Venture {
 
     @Id
@@ -30,7 +31,6 @@ public class Venture {
     @Column(nullable = false, columnDefinition = "bigint default 0")
     private long coVentureApplicationCount = 0;
 
-    // Only expose safe user fields — never the full graph
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "listed_by_user_id")
     @JsonIgnoreProperties({"listedDomains","purchasedDomains","listedVentures",
@@ -47,22 +47,28 @@ public class Venture {
             "verificationToken","verificationTokenExpiry","refreshToken","hibernateLazyInitializer"})
     private AppUser purchasedBy;
 
-
     @Enumerated(EnumType.STRING)
-    private VentureStage stage;          // IDEA, MVP, REVENUE_GENERATING, SCALING
+    private VentureStage stage;
 
-    private String lookingFor;           // free text: "Marketing co-founder, Angel investor"
+    // ── Roles — replaces the lookingFor JSON string ───────────────────────────
+    @OneToMany(
+            mappedBy = "venture",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    @OrderBy("sortOrder ASC")
+    @JsonIgnoreProperties("venture")
+    private List<VentureRole> roles = new ArrayList<>();
 
     @Column(columnDefinition = "TEXT")
     private String currentProblem;
-
 
     private boolean takenDown = false;
 
     @Column(columnDefinition = "TEXT")
     private String takeDownReason;
 
-    // Break the back-reference loop: don't serialize applications from Venture side
     @OneToMany(mappedBy = "venture", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnoreProperties("venture")
     private List<CoVenture> coVentureApplications = new ArrayList<>();
@@ -73,7 +79,6 @@ public class Venture {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
-    // Lifecycle — add before the no-arg constructor
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -85,7 +90,7 @@ public class Venture {
         this.updatedAt = LocalDateTime.now();
     }
 
-
+    // ─── Getters & Setters ────────────────────────────────────────────────────
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -102,80 +107,38 @@ public class Venture {
     public void setStatus(boolean status) { this.status = status; }
 
     public AppUser getListedBy() { return listedBy; }
-
     public void setListedBy(AppUser listedBy) { this.listedBy = listedBy; }
 
     public AppUser getPurchasedBy() { return purchasedBy; }
-
     public void setPurchasedBy(AppUser purchasedBy) { this.purchasedBy = purchasedBy; }
 
     public long getViews() { return views; }
-
     public void setViews(long views) { this.views = views; }
 
     public long getCoVentureApplicationCount() { return coVentureApplicationCount; }
-
     public void setCoVentureApplicationCount(long count) { this.coVentureApplicationCount = count; }
 
     public List<CoVenture> getCoVentureApplications() { return coVentureApplications; }
+    public void setCoVentureApplications(List<CoVenture> apps) { this.coVentureApplications = apps; }
 
-    public void setCoVentureApplications(List<CoVenture> coVentureApplications) {
-        this.coVentureApplications = coVentureApplications;
-    }
+    public VentureStage getStage() { return stage; }
+    public void setStage(VentureStage stage) { this.stage = stage; }
 
-    public String getCurrentProblem() {
-        return currentProblem;
-    }
+    public List<VentureRole> getRoles() { return roles; }
+    public void setRoles(List<VentureRole> roles) { this.roles = roles; }
 
-    public void setCurrentProblem(String currentProblem) {
-        this.currentProblem = currentProblem;
-    }
+    public String getCurrentProblem() { return currentProblem; }
+    public void setCurrentProblem(String currentProblem) { this.currentProblem = currentProblem; }
 
-    public String getLookingFor() {
-        return lookingFor;
-    }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
-    public void setLookingFor(String lookingFor) {
-        this.lookingFor = lookingFor;
-    }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
-    public VentureStage getStage() {
-        return stage;
-    }
+    public String getTakeDownReason() { return takeDownReason; }
+    public void setTakeDownReason(String takeDownReason) { this.takeDownReason = takeDownReason; }
 
-    public void setStage(VentureStage stage) {
-        this.stage = stage;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public String getTakeDownReason() {
-        return takeDownReason;
-    }
-
-    public void setTakeDownReason(String takeDownReason) {
-        this.takeDownReason = takeDownReason;
-    }
-
-    public boolean isTakenDown() {
-        return takenDown;
-    }
-
-    public void setTakenDown(boolean takenDown) {
-        this.takenDown = takenDown;
-    }
+    public boolean isTakenDown() { return takenDown; }
+    public void setTakenDown(boolean takenDown) { this.takenDown = takenDown; }
 }

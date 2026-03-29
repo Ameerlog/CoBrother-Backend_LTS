@@ -32,8 +32,6 @@ public class CoVenture {
     private String fullName;
     private String phone;
     private String location;
-    private String gstNo;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private CoVentureStatus status = CoVentureStatus.PENDING;
@@ -90,9 +88,6 @@ public class CoVenture {
 
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
-
-    public String getGstNo() { return gstNo; }
-    public void setGstNo(String gstNo) { this.gstNo = gstNo; }
 
     public CoVentureStatus getStatus() { return status; }
     public void setStatus(CoVentureStatus status) { this.status = status; }

@@ -22,18 +22,24 @@ public class CoBrotherService {
     @Autowired private MailService mailService;
     @Autowired private NotificationService notificationService;
 
+    // ── All requests assigned to this CoBrother ───────────────────────────────
     public ResponseEntity<?> getMyRequests(AppUser coBrother) {
         List<CoBrotherRequest> requests =
                 requestRepository.findByAssignedCoBrotherOrderByCreatedAtDesc(coBrother);
         return ResponseEntity.ok(requests);
     }
 
+    // ── CoBrother accepts or rejects a request ────────────────────────────────
     public ResponseEntity<?> respond(Long requestId, boolean accepted,
                                      String note, AppUser coBrother) {
+
         CoBrotherRequest request = requestRepository.findById(requestId).orElse(null);
-        if (request == null) return ResponseEntity.notFound().build();
+        if (request == null)
+            return ResponseEntity.notFound().build();
+
         if (!request.getAssignedCoBrother().getId().equals(coBrother.getId()))
             return ResponseEntity.status(403).body("Not assigned to you");
+
         if (request.getStatus() != CoBrotherRequestStatus.FORWARDED)
             return ResponseEntity.badRequest().body("Request is not in a respondable state");
 
@@ -44,8 +50,8 @@ public class CoBrotherService {
         request.setRespondedAt(LocalDateTime.now());
         requestRepository.save(request);
 
-        // ── If accepted, cancel all other FORWARDED/PAYMENT_PENDING requests
-        //    for the same entity so lister doesn't get multiple accepted requests ──
+        // ── If accepted: auto-cancel every other active request for the same entity
+        //    so the lister cannot end up with multiple accepted CoBrothers.
         if (accepted) {
             List<CoBrotherRequest> otherRequests = requestRepository
                     .findByEntityIdAndRequestType(request.getEntityId(), request.getRequestType())
@@ -58,19 +64,20 @@ public class CoBrotherService {
             otherRequests.forEach(r -> {
                 r.setStatus(CoBrotherRequestStatus.CANCELLED);
                 requestRepository.save(r);
-                // Notify the other CoBrothers their request was auto-cancelled
+
+                // Let the other CoBrother know their request was closed
                 notificationService.notify(
                         r.getAssignedCoBrother(),
-                        com.cobrother.web.Entity.notification.NotificationType
-                                .COVENTURE_APPLICATION_STATUS_CHANGED,
+                        NotificationType.COVENTURE_APPLICATION_STATUS_CHANGED,
                         "Request Closed",
                         "The request for " + r.getEntityTitle() +
-                        " has been handled by another CoBrother.",
+                                " has been handled by another CoBrother.",
                         "/cobrother"
                 );
             });
         }
-        // Notify lister
+
+        // ── Notify lister by email ────────────────────────────────────────────
         String outcome = accepted ? "accepted" : "rejected";
         mailService.sendCoBrotherResponseEmail(
                 request.getListerEmail(),
@@ -80,20 +87,21 @@ public class CoBrotherService {
                 note
         );
 
-        // Notify via in-app notification to lister
+        // ── Notify lister via in-app notification ─────────────────────────────
         if (request.getLister() != null) {
             notificationService.notify(
                     request.getLister(),
                     NotificationType.COVENTURE_APPLICATION_STATUS_CHANGED,
                     "CoBrother Request " + (accepted ? "Accepted" : "Rejected"),
-                    "Your CoBrother request for " + request.getEntityTitle() + "was " + outcome,
+                    // Fixed: was missing a space before "was"
+                    "Your CoBrother request for " + request.getEntityTitle() + " was " + outcome,
                     "/dashboard"
             );
         }
 
         return ResponseEntity.ok(Map.of(
                 "success", true,
-                "status", request.getStatus().name()
+                "status",  request.getStatus().name()
         ));
     }
 }

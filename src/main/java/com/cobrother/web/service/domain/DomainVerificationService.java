@@ -1,6 +1,7 @@
 package com.cobrother.web.service.domain;
 
 import com.cobrother.web.Entity.cobranding.Domain;
+import com.cobrother.web.Entity.cobranding.SaleType;
 import com.cobrother.web.Entity.cobranding.VerificationMethod;
 import com.cobrother.web.Entity.user.AppUser;
 import com.cobrother.web.Repository.DomainRepository;
@@ -11,7 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.xbill.DNS.*;
 import org.xbill.DNS.Record;
-
+import com.cobrother.web.service.auction.AuctionService;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -22,6 +23,7 @@ public class DomainVerificationService {
 
     @Autowired private DomainRepository domainRepository;
     @Autowired private MailService mailService;
+    @Autowired private AuctionService auctionService;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -196,6 +198,9 @@ public class DomainVerificationService {
         domain.setVerifiedAt(LocalDateTime.now());
         domain.setVerificationToken(null); // clear token after use
         domainRepository.save(domain);
+        if (domain.getSaleType() == SaleType.AUCTION) {
+            auctionService.activateAuction(domain.getId());
+        }
 
         return ResponseEntity.ok(Map.of(
                 "verified", true,

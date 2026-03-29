@@ -38,6 +38,9 @@ public class DomainService {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private com.cobrother.web.Repository.DomainEnquiryRepository domainEnquiryRepository;
+
     public ResponseEntity<Domain> getDomain(long id) {
         try {
             return ResponseEntity.ok(domainRepository.getDomainById(id));
@@ -135,9 +138,22 @@ public class DomainService {
             domain.setVerifiedAt(null);
             domain.setVerificationMethod(null);
             domain.setWhoisEmail(null);
+            // pricingDemand no longer collected from form — default to NEGOTIABLE
+            if (domain.getPricingDemand() == null) {
+                domain.setPricingDemand(PricingDemand.NEGOTIABLE);
+            }
             domain.setVerificationToken(
                     "cobrother-verify=" + UUID.randomUUID().toString().replace("-", "")
             );
+
+            // In addDomain(), after the existing validation checks, before saving:
+            if (domain.getSaleType() == SaleType.AUCTION) {
+                // Auction domains start as DRAFT — verified separately
+                // Don't set status to true yet — make visible so lister can see it in dashboard
+                // status=false keeps it off public listings until auction is ACTIVE
+                domain.setStatus(false); // hidden from public until auction activates
+                domain.setDomainStatus(DomainStatus.AVAILABLE);
+            }
             return ResponseEntity.ok(domainRepository.save(domain));
 
         } catch (Exception e) {
@@ -303,6 +319,45 @@ public class DomainService {
             return ResponseEntity.internalServerError().build();
         }
     }
+
+    // ── Domain Enquiry ────────────────────────────────────────────────────────
+    public ResponseEntity<?> submitEnquiry(long domainId, AppUser enquirer,
+                                           String fullName, String email,
+                                           String phone, String message) {
+        try {
+            Domain domain = domainRepository.getDomainById(domainId);
+            if (domain == null) return ResponseEntity.notFound().build();
+            if (domain.getAskingPrice() < 500000)
+                return ResponseEntity.badRequest()
+                        .body(java.util.Map.of("error", "Enquiries are only for domains above ₹5,00,000"));
+
+            DomainEnquiry enquiry = new DomainEnquiry();
+            enquiry.setDomain(domain);
+            enquiry.setEnquirer(enquirer);
+            enquiry.setFullName(fullName);
+            enquiry.setEmail(email);
+            enquiry.setPhone(phone);
+            enquiry.setMessage(message);
+            enquiry.setStatus(DomainEnquiryStatus.PENDING);
+            domainEnquiryRepository.save(enquiry);
+
+            // Notify admin by email (reuse existing mail infra if available)
+//            try {
+////                mailService.sendDomainEnquiryAdminEmail(
+////                        domain.getDomainName() + domain.getDomainExtension(),
+////                        fullName, email, phone, message, domain.getAskingPrice());
+//            } catch (Exception ignored) {
+//                // Email notification is non-critical — don't fail the request
+//            }
+
+            return ResponseEntity.ok(java.util.Map.of("success", true,
+                    "message", "Enquiry submitted successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(java.util.Map.of("error", "Failed to submit enquiry: " + e.getMessage()));
+        }
+    }
+
 
     // ── HMAC-SHA256 signature verification ───────────────────────────────────
     private String hmacSHA256(String data, String key) throws Exception {

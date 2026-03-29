@@ -1,4 +1,4 @@
-package com.cobrother.web.service.auth.oauth2;
+package com.cobrother.web.auth;
 
 import com.cobrother.web.service.auth.GoogleOAuth2UserInfo;
 import com.cobrother.web.service.auth.OAuth2UserInfo;

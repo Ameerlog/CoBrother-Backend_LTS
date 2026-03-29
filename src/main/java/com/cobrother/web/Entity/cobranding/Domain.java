@@ -91,6 +91,14 @@ public class Domain {
     @Column(columnDefinition = "TEXT")
     private String takeDownReason;
 
+    @Enumerated(EnumType.STRING)
+    private SaleType saleType = SaleType.ONE_TIME;
+
+    @OneToOne(mappedBy = "domain", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({"domain","bids","hibernateLazyInitializer"})
+    private Auction auction;
+
+
     // Lifecycle — add before the no-arg constructor
     @PrePersist
     protected void onCreate() {
@@ -220,5 +228,21 @@ public class Domain {
 
     public void setTakenDown(boolean takenDown) {
         this.takenDown = takenDown;
+    }
+
+    public Auction getAuction() {
+        return auction;
+    }
+
+    public void setAuction(Auction auction) {
+        this.auction = auction;
+    }
+
+    public SaleType getSaleType() {
+        return saleType;
+    }
+
+    public void setSaleType(SaleType saleType) {
+        this.saleType = saleType;
     }
 }

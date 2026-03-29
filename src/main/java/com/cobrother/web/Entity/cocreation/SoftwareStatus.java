@@ -1,3 +1,3 @@
 
 package com.cobrother.web.Entity.cocreation;
-public enum SoftwareStatus { AVAILABLE, SOLD }
+public enum SoftwareStatus { AVAILABLE, SOLD, PENDING }

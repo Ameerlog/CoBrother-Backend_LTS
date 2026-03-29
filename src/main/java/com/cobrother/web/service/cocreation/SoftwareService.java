@@ -1,10 +1,11 @@
 package com.cobrother.web.service.cocreation;
 
+import com.cobrother.web.Entity.cobrother.CoBrotherRequest;
+import com.cobrother.web.Entity.cobrother.CoBrotherRequestStatus;
+import com.cobrother.web.Entity.cobrother.RequestType;
 import com.cobrother.web.Entity.cocreation.*;
 import com.cobrother.web.Entity.user.AppUser;
-import com.cobrother.web.Repository.CommunityRepository;
-import com.cobrother.web.Repository.SoftwareRepository;
-import com.cobrother.web.Repository.SoftwareViewRepository;
+import com.cobrother.web.Repository.*;
 import com.cobrother.web.service.auth.MailService;
 import com.cobrother.web.service.notification.NotificationService;
 import com.razorpay.Order;
@@ -28,6 +29,7 @@ public class SoftwareService {
     @Autowired private SoftwareViewRepository softwareViewRepository;
     @Autowired private CommunityRepository communityRepository;
     @Autowired private MailService mailService;
+    @Autowired private SoftwarePurchaseRepository purchaseRepository;
 
     @Value("${razorpay.key-id}")
     private String razorpayKeyId;
@@ -38,10 +40,16 @@ public class SoftwareService {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired private CoBrotherRequestRepository coBrotherRequestRepository;
+
     // ── CRUD ──────────────────────────────────────────────────────────────────
 
     public ResponseEntity<List<Software>> getAll() {
-        return ResponseEntity.ok(softwareRepository.findByStatusTrue());
+        List<Software> list = softwareRepository.findByStatusTrue();
+        list.forEach(s -> s.setPurchaseCount(
+                purchaseRepository.countBySoftware_IdAndPaymentStatus(
+                        s.getId(), SoftwarePaymentStatus.COMPLETED)));
+        return ResponseEntity.ok(list);
     }
 
     public ResponseEntity<Software> getById(Long id, AppUser viewer) {
@@ -51,37 +59,37 @@ public class SoftwareService {
         // Track view
         trackView(software, viewer);
 
-        // Only expose github link if buyer has confirmed purchase
-        if (viewer == null
-                || software.getPurchasedBy() == null
-                || !software.getPurchasedBy().getId().equals(viewer.getId())
-                || software.getPaymentStatus() != SoftwarePaymentStatus.COMPLETED) {
-            software.setGithubLink(null);
-        }
 
         return ResponseEntity.ok(software);
     }
 
     public ResponseEntity<List<Software>> getMyListings(AppUser user) {
-        // Owner sees everything including github link
-        return ResponseEntity.ok(softwareRepository.findByListedBy(user));
+        List<Software> list = softwareRepository.findByListedBy(user);
+        list.forEach(s -> s.setPurchaseCount(
+                purchaseRepository.countBySoftware_IdAndPaymentStatus(
+                        s.getId(), SoftwarePaymentStatus.COMPLETED)));
+        return ResponseEntity.ok(list);
     }
-
-    public ResponseEntity<List<Software>> getMyPurchases(AppUser user) {
-        List<Software> purchases = softwareRepository.findByPurchasedBy(user);
-        // Expose github only where confirmed
-        purchases.forEach(s -> {
-            if (s.getPaymentStatus() != SoftwarePaymentStatus.COMPLETED) {
-                s.setGithubLink(null);
+    public ResponseEntity<List<SoftwarePurchase>> getMyPurchases(AppUser buyer) {
+        List<SoftwarePurchase> purchases = purchaseRepository.findByBuyer(buyer);
+        // For each completed purchase, include github link
+        purchases.forEach(p -> {
+            if (p.getPaymentStatus() != SoftwarePaymentStatus.COMPLETED) {
+                p.getSoftware().setGithubLink(null);
             }
         });
         return ResponseEntity.ok(purchases);
     }
 
+
     public ResponseEntity<Software> create(Software software) {
         try {
             software.setStatus(true);
             software.setSoftwareStatus(SoftwareStatus.AVAILABLE);
+            // pricingDemand is no longer collected from the form — default to FIXED
+            if (software.getPricingDemand() == null) {
+                software.setPricingDemand(SoftwarePricingDemand.FIXED);
+            }
             return ResponseEntity.ok(softwareRepository.save(software));
         } catch (Exception e) {
             e.printStackTrace();
@@ -131,87 +139,116 @@ public class SoftwareService {
     // ── Payment ───────────────────────────────────────────────────────────────
 
     public ResponseEntity<?> createOrder(Long id, AppUser buyer,
-                                         String buyerFullName, String buyerEmail, String buyerPhone) {
+                                         String buyerFullName, String buyerEmail,
+                                         String buyerPhone, boolean coBrotherOptIn) {
         try {
             Software software = softwareRepository.findSoftwareById(id);
             if (software == null) return ResponseEntity.notFound().build();
-            if (software.getSoftwareStatus() != SoftwareStatus.AVAILABLE)
-                return ResponseEntity.badRequest().body("Software is not available");
             if (software.getListedBy().getId().equals(buyer.getId()))
                 return ResponseEntity.badRequest().body("You cannot buy your own listing");
 
+            // Check if this buyer already has a completed purchase for this software
+            Optional<SoftwarePurchase> existingPurchase =
+                    purchaseRepository.findBySoftware_IdAndBuyer(id, buyer);
+            if (existingPurchase.isPresent() &&
+                    existingPurchase.get().getPaymentStatus() == SoftwarePaymentStatus.COMPLETED) {
+                return ResponseEntity.badRequest().body("You have already purchased this software");
+            }
+
+            double basePrice    = software.getPrice();
+            double coBrotherFee = coBrotherOptIn ? 1000.0 : 0.0;
+            double totalAmount  = basePrice + coBrotherFee;
+
             RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpayKeySecret);
             JSONObject orderRequest = new JSONObject();
-            orderRequest.put("amount", (int)(software.getPrice() * 100));
+            orderRequest.put("amount", (int)(totalAmount * 100));
             orderRequest.put("currency", "INR");
-            orderRequest.put("receipt", "software_" + id + "_" + buyer.getId());
+            orderRequest.put("receipt", "sw_" + id + "_" + buyer.getId());
 
             Order order = client.orders.create(orderRequest);
 
-            // ✅ Only store order metadata — do NOT set purchasedBy or completionStatus yet
-            software.setRazorpayOrderId(order.get("id").toString());
-            software.setPaymentStatus(SoftwarePaymentStatus.CREATED);
-            // Temporarily store buyer details for the verify step
-            software.setBuyerFullName(buyerFullName);
-            software.setBuyerEmail(buyerEmail);
-            software.setBuyerPhone(buyerPhone);
-            softwareRepository.save(software);
+            // Create SoftwarePurchase record
+            SoftwarePurchase purchase = new SoftwarePurchase();
+            purchase.setSoftware(software);
+            purchase.setBuyer(buyer);
+            purchase.setBuyerFullName(buyerFullName);
+            purchase.setBuyerEmail(buyerEmail);
+            purchase.setBuyerPhone(buyerPhone);
+            purchase.setRazorpayOrderId(order.get("id").toString());
+            purchase.setPaymentStatus(SoftwarePaymentStatus.CREATED);
+            purchase.setCoBrotherOptIn(coBrotherOptIn);
+            purchaseRepository.save(purchase);
 
-            return ResponseEntity.ok(Map.of(
-                    "orderId", order.get("id").toString(),
-                    "amount", software.getPrice(),
-                    "currency", "INR",
-                    "softwareId", id,
-                    "keyId", razorpayKeyId
-            ));
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("orderId",        order.get("id").toString());
+            response.put("amount",         totalAmount);
+            response.put("basePrice",      basePrice);
+            response.put("coBrotherFee",   coBrotherFee);
+            response.put("coBrotherOptIn", coBrotherOptIn);
+            response.put("currency",       "INR");
+            response.put("softwareId",     id);
+            response.put("keyId",          razorpayKeyId);
+            return ResponseEntity.ok(response);
+
         } catch (RazorpayException e) {
             return ResponseEntity.internalServerError().body("Order creation failed: " + e.getMessage());
         }
     }
 
-    public ResponseEntity<?> verifyPayment(Long id, String paymentId,
-                                           String orderId, String signature, AppUser buyer) {
+    // ── verifyPayment ────────────────────────────────────────────────────────────
+    public ResponseEntity<?> verifyPayment(Long softwareId, String paymentId,
+                                           String orderId, String signature,
+                                           AppUser buyer) {
         try {
-            Software software = softwareRepository.findSoftwareById(id);
-            if (software == null) return ResponseEntity.notFound().build();
+            SoftwarePurchase purchase = purchaseRepository.findByRazorpayOrderId(orderId)
+                    .orElse(null);
+            if (purchase == null) return ResponseEntity.notFound().build();
 
-            String payload = orderId + "|" + paymentId;
+            String payload  = orderId + "|" + paymentId;
             String expected = hmacSHA256(payload, razorpayKeySecret);
 
             if (!expected.equals(signature)) {
-                software.setPaymentStatus(SoftwarePaymentStatus.FAILED);
-                // ✅ Don't set purchasedBy on failure
-                softwareRepository.save(software);
-                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Verification failed"));
+                purchase.setPaymentStatus(SoftwarePaymentStatus.FAILED);
+                purchaseRepository.save(purchase);
+                return ResponseEntity.badRequest().body(Map.of("success", false,
+                        "message", "Verification failed"));
             }
 
-            // ✅ Payment confirmed — NOW set purchasedBy and completionStatus
-            software.setSoftwareStatus(SoftwareStatus.SOLD);
-            software.setPaymentStatus(SoftwarePaymentStatus.COMPLETED);
-            software.setRazorpayPaymentId(paymentId);
-            software.setSoldAt(LocalDateTime.now());
-            software.setPurchasedBy(buyer);                                      // ✅ set here
-            software.setCompletionStatus(PurchaseCompletionStatus.PENDING);      // ✅ set here
+            Software software = purchase.getSoftware();
+            purchase.setPaymentStatus(SoftwarePaymentStatus.COMPLETED);
+            purchase.setRazorpayPaymentId(paymentId);
+            purchase.setSoldAt(LocalDateTime.now());
+
+            if (purchase.isCoBrotherOptIn()) {
+                purchase.setCoBrotherHelpPaid(true);
+            }
+            purchaseRepository.save(purchase);
+
+            // Auto-create CoBrotherRequest so admin can forward immediately
+            // Always create a CoBrother request so admin can track the purchase.
+            // The request captures whether the addon was paid; Forward button is
+            // shown only when coBrotherHelpPaid == true.
+            createCoCrationRequest(purchase, software);
+
+            software.setViews(software.getViews() + 1);
             softwareRepository.save(software);
-
-            notificationService.notifySoftwarePurchased(
-                    software.getListedBy(),
-                    software.getName(),
-                    buyer.getFirstname() + " " + buyer.getLastname()
-            );
-
 
             mailService.sendSoftwarePurchaseBuyerEmail(
                     buyer.getEmail(), buyer.getFirstname(),
                     software.getName(), software.getPrice(), paymentId, software.getGithubLink());
             mailService.sendSoftwarePurchaseSellerEmail(
                     software.getListedBy().getEmail(), software.getListedBy().getFirstname(),
-                    software.getName(), software.getBuyerFullName(), software.getPrice());
+                    software.getName(), purchase.getBuyerFullName(), software.getPrice());
+
+            notificationService.notifySoftwarePurchased(
+                    software.getListedBy(), software.getName(),
+                    buyer.getFirstname() + " " + buyer.getLastname());
 
             Map<String, Object> response = new LinkedHashMap<>();
-            response.put("success", true);
-            response.put("message", "Payment successful");
+            response.put("success",    true);
+            response.put("message",    "Payment successful");
             response.put("githubLink", software.getGithubLink() != null ? software.getGithubLink() : "");
+            response.put("purchaseId", purchase.getId());
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
@@ -219,48 +256,20 @@ public class SoftwareService {
         }
     }
 
-    public ResponseEntity<?> handleFailure(Long id) {
+    // ── handleFailure ────────────────────────────────────────────────────────────
+    public ResponseEntity<?> handleFailure(Long softwareId, AppUser buyer) {
         try {
-            Software software = softwareRepository.findSoftwareById(id);
-            if (software != null) {
-                software.setPaymentStatus(SoftwarePaymentStatus.FAILED);
-                software.setPurchasedBy(null);        // ✅ ensure null on failure
-                software.setRazorpayOrderId(null);
-                software.setCompletionStatus(null);   // ✅ ensure null on failure
-                software.setBuyerFullName(null);
-                software.setBuyerEmail(null);
-                software.setBuyerPhone(null);
-                softwareRepository.save(software);
-            }
+            // Find the most recent CREATED purchase for this buyer+software
+            purchaseRepository.findBySoftware_IdAndBuyer(softwareId, buyer)
+                    .ifPresent(p -> {
+                        if (p.getPaymentStatus() == SoftwarePaymentStatus.CREATED) {
+                            p.setPaymentStatus(SoftwarePaymentStatus.FAILED);
+                            purchaseRepository.save(p);
+                        }
+                    });
             return ResponseEntity.ok(Map.of("success", false));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
-        }
-    }
-
-    // ── Buyer confirms everything is fine ─────────────────────────────────────
-    public ResponseEntity<?> confirmPurchase(Long id, AppUser buyer) {
-        try {
-            Software software = softwareRepository.findSoftwareById(id);
-            if (software == null) return ResponseEntity.notFound().build();
-            if (software.getPurchasedBy() == null
-                    || !software.getPurchasedBy().getId().equals(buyer.getId()))
-                return ResponseEntity.status(403).body("Not your purchase");
-            if (software.getPaymentStatus() != SoftwarePaymentStatus.COMPLETED)
-                return ResponseEntity.badRequest().body("Payment not completed");
-
-            software.setCompletionStatus(PurchaseCompletionStatus.CONFIRMED);
-            softwareRepository.save(software);
-
-            notificationService.notifySoftwareMarkedComplete(
-                    software.getListedBy(),
-                    software.getName(),
-                    buyer.getFirstname() + " " + buyer.getLastname()
-            );
-
-            return ResponseEntity.ok(Map.of("success", true, "githubLink", software.getGithubLink()));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Error: " + e.getMessage());
         }
     }
 
@@ -291,13 +300,12 @@ public class SoftwareService {
                 .collect(Collectors.groupingBy(SoftwareView::getViewerRole, Collectors.counting()));
 
         // Revenue from confirmed purchases
-        List<Software> allListings = softwareRepository.findByListedBy(user);
-        double totalRevenue = allListings.stream()
-                .filter(s -> s.getPaymentStatus() == SoftwarePaymentStatus.COMPLETED)
-                .mapToDouble(Software::getPrice).sum();
+        List<SoftwarePurchase> allPurchases = purchaseRepository.findBySoftware_Id(softwareId);
+        long totalSales = allPurchases.stream()
+                .filter(p -> p.getPaymentStatus() == SoftwarePaymentStatus.COMPLETED).count();
+        double totalRevenue = totalSales * software.getPrice();
 
-        long totalSales = allListings.stream()
-                .filter(s -> s.getPaymentStatus() == SoftwarePaymentStatus.COMPLETED).count();
+// Replace totalRevenue/totalSales section in result map:
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("softwareId", softwareId);
@@ -305,10 +313,14 @@ public class SoftwareService {
         result.put("totalViews", views.size());
         result.put("totalSales", totalSales);
         result.put("totalRevenue", totalRevenue);
+        result.put("purchasers", allPurchases.stream()
+                .filter(p -> p.getPaymentStatus() == SoftwarePaymentStatus.COMPLETED)
+                .map(p -> Map.of(
+                        "buyerName", p.getBuyerFullName() != null ? p.getBuyerFullName() : "",
+                        "soldAt",    p.getSoldAt() != null ? p.getSoldAt().toString() : "")).collect(Collectors.toList()));
         result.put("viewsByDay", viewsByDay);
         result.put("byIndustry", byIndustry);
         result.put("byRole", byRole);
-        result.put("completionStatus", software.getCompletionStatus());
         return ResponseEntity.ok(result);
     }
 
@@ -341,5 +353,199 @@ public class SoftwareService {
         StringBuilder hex = new StringBuilder();
         for (byte b : hash) hex.append(String.format("%02x", b));
         return hex.toString();
+    }
+
+
+    public ResponseEntity<?> createPurchaseOrder(long softwareId, AppUser buyer,
+                                                 boolean coBrotherOptIn) {
+        try {
+            Software software = softwareRepository.findSoftwareById(softwareId);
+            if (software == null) return ResponseEntity.notFound().build();
+            if (software.getListedBy().getId().equals(buyer.getId()))
+                return ResponseEntity.badRequest().body("You cannot buy your own software");
+            if (software.getSoftwareStatus() != SoftwareStatus.AVAILABLE)
+                return ResponseEntity.badRequest().body("Software is not available");
+
+            double basePrice     = software.getPrice();
+            double coBrotherFee  = coBrotherOptIn ? 1000.0 : 0.0;
+            double totalAmount   = basePrice + coBrotherFee;
+
+            RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpayKeySecret);
+            JSONObject orderRequest = new JSONObject();
+            orderRequest.put("amount", (int)(totalAmount * 100)); // paise
+            orderRequest.put("currency", "INR");
+            orderRequest.put("receipt", "sw_" + softwareId + "_" + buyer.getId());
+
+            Order order = client.orders.create(orderRequest);
+
+            software.setSoftwareStatus(SoftwareStatus.PENDING);
+            softwareRepository.save(software);
+
+            return ResponseEntity.ok(Map.of(
+                    "orderId",       order.get("id").toString(),
+                    "amount",        totalAmount,
+                    "basePrice",     basePrice,
+                    "coBrotherFee",  coBrotherFee,
+                    "coBrotherOptIn", coBrotherOptIn,
+                    "currency",      "INR",
+                    "softwareId",    softwareId,
+                    "keyId",         razorpayKeyId
+            ));
+        } catch (RazorpayException e) {
+            return ResponseEntity.internalServerError()
+                    .body("Payment order creation failed: " + e.getMessage());
+        }
+    }
+
+    public ResponseEntity<?> createCoBrotherHelpOrder(Long purchaseId, AppUser buyer) {
+        try {
+            SoftwarePurchase purchase = purchaseRepository.findById(purchaseId).orElse(null);
+            if (purchase == null) return ResponseEntity.notFound().build();
+            if (!purchase.getBuyer().getId().equals(buyer.getId()))
+                return ResponseEntity.status(403).body("Not your purchase");
+            if (purchase.getPaymentStatus() != SoftwarePaymentStatus.COMPLETED)
+                return ResponseEntity.badRequest().body("Purchase not completed");
+            if (purchase.isCoBrotherHelpPaid())
+                return ResponseEntity.badRequest().body("Already paid");
+
+            RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpayKeySecret);
+            JSONObject req = new JSONObject();
+            req.put("amount", 100000); // ₹1000
+            req.put("currency", "INR");
+            req.put("receipt", "cbhelp_" + purchaseId);
+            Order order = client.orders.create(req);
+
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("orderId",  order.get("id").toString());
+            response.put("amount",   1000.0);
+            response.put("currency", "INR");
+            response.put("keyId",    razorpayKeyId);
+            return ResponseEntity.ok(response);
+        } catch (RazorpayException e) {
+            return ResponseEntity.internalServerError().body("Failed: " + e.getMessage());
+        }
+    }
+
+    public ResponseEntity<?> verifyCoBrotherHelp(Long purchaseId, AppUser buyer,
+                                                 String paymentId, String orderId, String signature) {
+        try {
+            SoftwarePurchase purchase = purchaseRepository.findById(purchaseId).orElse(null);
+            if (purchase == null) return ResponseEntity.notFound().build();
+            if (!purchase.getBuyer().getId().equals(buyer.getId()))
+                return ResponseEntity.status(403).body("Not your purchase");
+
+            String expected = hmacSHA256(orderId + "|" + paymentId, razorpayKeySecret);
+            if (!expected.equals(signature))
+                return ResponseEntity.badRequest().body(Map.of("success", false));
+
+            purchase.setCoBrotherOptIn(true);
+            purchase.setCoBrotherHelpPaid(true);
+            purchaseRepository.save(purchase);
+
+            // Auto-create CoBrotherRequest — admin can now forward it
+            createCoCrationRequest(purchase, purchase.getSoftware());
+
+            Software sw = purchase.getSoftware();
+            if (sw != null && sw.getListedBy() != null) {
+                notificationService.notify(
+                        sw.getListedBy(),
+                        com.cobrother.web.Entity.notification.NotificationType.COVENTURE_APPLICATION_RECEIVED,
+                        "CoBrother Addon Activated",
+                        purchase.getBuyerFullName() + " has activated the CoBrother helper addon for \"" +
+                                sw.getName() + "\". The admin can now forward a CoBrother request.",
+                        "/dashboard"
+                );
+            }
+
+            return ResponseEntity.ok(Map.of("success", true,
+                    "message", "CoBrother help activated!"));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Error: " + e.getMessage());
+        }
+    }
+
+    private void createCoCrationRequest(SoftwarePurchase purchase, Software sw) {
+        // If a PENDING request already exists for this purchase, update its entityDetails
+        // to reflect the latest coBrotherHelpPaid flag (e.g. buyer paid addon later).
+        Optional<CoBrotherRequest> existingOpt = coBrotherRequestRepository
+                .findFirstByEntityIdAndRequestTypeAndStatus(
+                        purchase.getId(),
+                        RequestType.COCREATION,
+                        CoBrotherRequestStatus.PENDING);
+
+        if (existingOpt.isPresent()) {
+            CoBrotherRequest existing = existingOpt.get();
+            // Rebuild entityDetails with up-to-date coBrotherHelpPaid
+            existing.setEntityDetails(buildEntityDetails(purchase, sw));
+            coBrotherRequestRepository.save(existing);
+            return;
+        }
+
+        // Guard: if a non-PENDING active request exists (FORWARDED / ACCEPTED etc.) don't create another
+        boolean activeExists = coBrotherRequestRepository
+                .existsByEntityIdAndRequestTypeAndStatusNotIn(
+                        purchase.getId(),
+                        RequestType.COCREATION,
+                        List.of(CoBrotherRequestStatus.CANCELLED, CoBrotherRequestStatus.REJECTED,
+                                CoBrotherRequestStatus.PENDING));
+        if (activeExists) return;
+
+        AppUser lister = sw.getListedBy();
+
+        String buyerName  = purchase.getBuyerFullName() != null ? purchase.getBuyerFullName()
+                : (purchase.getBuyer() != null
+                ? purchase.getBuyer().getFirstname() + " " + purchase.getBuyer().getLastname() : "");
+        String buyerEmail = purchase.getBuyerEmail() != null ? purchase.getBuyerEmail()
+                : (purchase.getBuyer() != null ? purchase.getBuyer().getEmail() : "");
+        String buyerPhone = purchase.getBuyerPhone() != null ? purchase.getBuyerPhone()
+                : (purchase.getBuyer() != null ? purchase.getBuyer().getPhoneNumber() : "");
+
+        CoBrotherRequest req = new CoBrotherRequest();
+        req.setRequestType(RequestType.COCREATION);
+        req.setEntityId(purchase.getId());
+        req.setStatus(CoBrotherRequestStatus.PENDING);   // no CoBrother assigned yet
+        // assignedCoBrother left null — admin picks via Forward modal
+
+        req.setLister(lister);
+        req.setListerName(lister.getFirstname() + " " + lister.getLastname());
+        req.setListerEmail(lister.getEmail());
+        req.setListerPhone(lister.getPhoneNumber());
+
+        req.setApplicantName(buyerName);
+        req.setApplicantEmail(buyerEmail);
+        req.setApplicantPhone(buyerPhone);
+
+        req.setEntityTitle("Co-Creation Purchase Request — " + sw.getName());
+        req.setPaidAt(purchase.getSoldAt() != null ? purchase.getSoldAt() : LocalDateTime.now());
+
+        req.setEntityDetails(buildEntityDetails(purchase, sw));
+
+        coBrotherRequestRepository.save(req);
+    }
+
+    /** Builds the entityDetails JSON string for a COCREATION CoBrotherRequest. */
+    private String buildEntityDetails(SoftwarePurchase purchase, Software sw) {
+        String buyerName  = purchase.getBuyerFullName() != null ? purchase.getBuyerFullName()
+                : (purchase.getBuyer() != null
+                ? purchase.getBuyer().getFirstname() + " " + purchase.getBuyer().getLastname() : "");
+        String buyerEmail = purchase.getBuyerEmail() != null ? purchase.getBuyerEmail()
+                : (purchase.getBuyer() != null ? purchase.getBuyer().getEmail() : "");
+        String buyerPhone = purchase.getBuyerPhone() != null ? purchase.getBuyerPhone()
+                : (purchase.getBuyer() != null ? purchase.getBuyer().getPhoneNumber() : "");
+
+        return "{" +
+                "\"type\":\"CoCrationPurchase\"," +
+                "\"purchaseId\":" + purchase.getId() + "," +
+                "\"softwareId\":" + sw.getId() + "," +
+                "\"softwareName\":\"" + sw.getName() + "\"," +
+                "\"price\":" + sw.getPrice() + "," +
+                "\"category\":\"" + (sw.getCategory() != null ? sw.getCategory().name() : "") + "\"," +
+                "\"techStack\":\"" + (sw.getTechStack() != null
+                ? sw.getTechStack().replace("\"", "'") : "") + "\"," +
+                "\"buyerName\":\"" + buyerName.replace("\"", "'") + "\"," +
+                "\"buyerEmail\":\"" + buyerEmail + "\"," +
+                "\"buyerPhone\":\"" + buyerPhone + "\"," +
+                "\"coBrotherHelpPaid\":" + purchase.isCoBrotherHelpPaid() +
+                "}";
     }
 }

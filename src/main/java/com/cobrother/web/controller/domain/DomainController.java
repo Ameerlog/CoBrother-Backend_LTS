@@ -105,4 +105,13 @@ public class DomainController {
         String otpCode = body != null ? body.get("code") : null;
         return domainVerificationService.checkVerification(id, otpCode, currentUserService.getCurrentUser());
     }
+
+    @PostMapping("/{id}/enquiry")
+    public ResponseEntity<?> submitEnquiry(@PathVariable Long id,
+                                           @RequestBody Map<String, String> body) {
+        return domainService.submitEnquiry(id,
+                currentUserService.getCurrentUser(),
+                body.get("fullName"), body.get("email"),
+                body.get("phone"), body.get("message"));
+    }
 }

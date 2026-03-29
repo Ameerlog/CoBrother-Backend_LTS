@@ -33,4 +33,13 @@ public interface CoBrotherRequestRepository extends JpaRepository<CoBrotherReque
             List<CoBrotherRequestStatus> statuses);
 
     List<CoBrotherRequest> findByEntityIdAndRequestType(Long entityId, RequestType requestType);
+
+    boolean existsByEntityIdAndRequestTypeAndStatusNot(Long entityId, RequestType requestType, CoBrotherRequestStatus coBrotherRequestStatus);
+
+    boolean existsByEntityIdAndRequestTypeAndStatusNotIn(Long entityId, RequestType requestType, List<CoBrotherRequestStatus> cancelled);
+
+    Optional<CoBrotherRequest> findFirstByEntityIdAndRequestTypeAndStatusNotInOrderByCreatedAtDesc(Long id, RequestType requestType, List<CoBrotherRequestStatus> cancelled);
+
+    Optional<CoBrotherRequest> findFirstByEntityIdAndRequestTypeAndStatus(
+            Long entityId, RequestType requestType, CoBrotherRequestStatus status);
 }

@@ -463,4 +463,66 @@ public class MailService {
     }
 
     private String safeStr(String s) { return s != null ? s : "—"; }
+
+    @Async
+    public void sendAuctionWinnerEmail(String toEmail, String winnerName,
+                                       String domainName, double amount) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("🎉 You Won the Auction — " + domainName);
+
+            String html = "<html><body style='font-family: Arial, sans-serif;'>" +
+                    "<div style='max-width: 600px; margin: 0 auto; padding: 20px;'>" +
+                    "<h2 style='color: #1a1a2e;'>Congratulations! You Won 🎉</h2>" +
+                    "<p>Hi " + winnerName + ",</p>" +
+                    "<p>You won the auction for <strong>" + domainName + "</strong>.</p>" +
+                    "<div style='background:#f4f4f4; padding:15px; border-radius:8px; margin:20px 0;'>" +
+                    "<p><strong>Domain:</strong> " + domainName + "</p>" +
+                    "<p><strong>Winning Bid:</strong> ₹" + String.format("%.2f", amount) + "</p>" +
+                    "</div>" +
+                    "<p style='color:#e67e22; font-weight:600;'>Our team will contact you shortly " +
+                    "to coordinate the domain transfer and payment.</p>" +
+                    "</div></body></html>";
+
+            helper.setText(html, true);
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    @Async
+    public void sendAuctionEndedSellerEmail(String toEmail, String sellerName,
+                                            String domainName, String winnerName,
+                                            double amount) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Your Auction Ended — " + domainName);
+
+            String html = "<html><body style='font-family: Arial, sans-serif;'>" +
+                    "<div style='max-width: 600px; margin: 0 auto; padding: 20px;'>" +
+                    "<h2 style='color: #1a1a2e;'>Auction Completed</h2>" +
+                    "<p>Hi " + sellerName + ",</p>" +
+                    "<p>Your auction for <strong>" + domainName + "</strong> has ended.</p>" +
+                    "<div style='background:#f4f4f4; padding:15px; border-radius:8px; margin:20px 0;'>" +
+                    "<p><strong>Winner:</strong> " + winnerName + "</p>" +
+                    "<p><strong>Winning Bid:</strong> ₹" + String.format("%.2f", amount) + "</p>" +
+                    "</div>" +
+                    "<p style='color:#e67e22; font-weight:600;'>Our admin team will coordinate " +
+                    "the transfer with both parties.</p>" +
+                    "</div></body></html>";
+
+            helper.setText(html, true);
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
 }
