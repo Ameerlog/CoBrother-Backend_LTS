@@ -1,83 +1,85 @@
 spring:
   application:
-    name: CoBrother-Web
+    name: ${SPRING_APPLICATION_NAME}
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/cobrother
-    password: 8431465059
-    username: postgres
-    driver-class-name: org.postgresql.Driver
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME}
 
   jpa:
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        dialect: ${SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT}
     hibernate:
-      ddl-auto: create
-
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
 
   h2:
     console:
-      enabled: true
-      path: /h2-console
+      enabled: ${SPRING_H2_CONSOLE_ENABLED}
+      path: ${SPRING_H2_CONSOLE_PATH}
 
   mail:
-    username: example@gmail.com
-    password: zday ymtk kbax nrib
-    host: smtp.gmail.com
-    port: 587
+    username: ${SPRING_MAIL_USERNAME}
+    password: ${SPRING_MAIL_PASSWORD}
+    host: ${SPRING_MAIL_HOST}
+    port: ${SPRING_MAIL_PORT}
     properties:
       mail:
         smtp:
-          auth: true
+          auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH}
           starttls:
-            enable:
-              true
-
+            enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE}
 
   security:
     oauth2:
       client:
         registration:
           google:
-            client-id: 4792627824-vdes1hk2badtefmj9k8b4gbrb6pqqc3d.apps.googleusercontent.com
-            client-secret: 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
-            scope: openid,profile,email
-            redirect-uri: http://localhost:8080/login/oauth2/code/google
+            client-id: ${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID}
+            client-secret: ${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET}
+            scope: ${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_SCOPE}
+            redirect-uri: ${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_REDIRECT_URI}
+        provider:
+          linkedin:
+            authorization-uri: ${SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_LINKEDIN_AUTHORIZATION_URI}
+            token-uri: ${SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_LINKEDIN_TOKEN_URI}
+            user-info-uri: ${SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_LINKEDIN_USER_INFO_URI}
+
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${SPRING_DATA_REDIS_HOST}
+      port: ${SPRING_DATA_REDIS_PORT}
 
 server:
-  port: 8080
+  port: ${SERVER_PORT}
 
 jwt:
-  secret: cBp7/MqB9AzeWa6vlrvaIg8KdVI0rNbwgeXG1scQPI8T0CcC4TXb6VcW3OwH1cgGLOqeE7LZ/l7if1OP3v2usA==
-  expiration: 36000000
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION}
   refresh:
-    expiration: 2592000000
+    expiration: ${JWT_REFRESH_EXPIRATION}
 
 app:
-  frontend-url: http://localhost:3000
+  frontend-url: ${APP_FRONTEND_URL}
   oauth2:
-    redirect-uri: http://localhost:3000/auth/callback
+    redirect-uri: ${APP_OAUTH2_REDIRECT_URI}
 
 linkedin:
-  client-id: 77kepiwbqxdlhh
-  client-secret: WPL_AP1.vWPcBMBGJzvjKsb8.D2EVtw==
-  redirect-uri: http://localhost:8080/api/v1/community/linkedin/callback
-
+  client-id: ${LINKEDIN_CLIENT_ID}
+  client-secret: ${LINKEDIN_CLIENT_SECRET}
+  redirect-uri: ${LINKEDIN_REDIRECT_URI}
 
 cloud:
   aws:
     credentials:
-      access-key: AKIATH22YZ4Z4EVCPNV2
-      secret-key: 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
-      region: ap-south-1
+      access-key: ${CLOUD_AWS_CREDENTIALS_ACCESS_KEY}
+      secret-key: ${CLOUD_AWS_CREDENTIALS_SECRET_KEY}
+      region: ${CLOUD_AWS_REGION}
     venture:
-      images-bucket: cobrother-storage
+      images-bucket: ${CLOUD_AWS_VENTURE_IMAGES_BUCKET}
 
 razorpay:
-  key-id: rzp_test_SQN5WUSMW35meT
-  key-secret: NcccbwDMc0m3QF9wVGAh0lt0
+  key-id: ${RAZORPAY_KEY_ID}
+  key-secret: ${RAZORPAY_KEY_SECRET}

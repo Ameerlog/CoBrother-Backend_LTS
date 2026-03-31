@@ -13,7 +13,9 @@ public interface SoftwareRepository extends JpaRepository<Software, Long> {
     List<Software> findByStatusTrue();
     List<Software> findByListedBy(AppUser user);
     Software findSoftwareById(Long id);
-
+    // added this line changess
+    @Query("select s from Software s where s.listedBy.role = ?1")
+List<Software> findAllSoftwareListedByCobrother(UserRole role);
 
     List<Software> findAll();
 }

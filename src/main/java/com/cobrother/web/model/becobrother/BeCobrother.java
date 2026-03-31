@@ -12,12 +12,13 @@ public class BeCobrother {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
     private String fullName;
+    private String email;
     private String phoneNumber;
     private String pinCode;
     private Skill skill;
     private boolean equipment;
 
-    private enum Skill{
+    public enum Skill{
         CRM_SETUP, AI_SOCIAL_BOTS, SAAS_SETUP
     }
 
@@ -37,6 +38,14 @@ public class BeCobrother {
 
     public void setFullName(String fullName) {
         this.fullName = fullName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public String getPhoneNumber() {

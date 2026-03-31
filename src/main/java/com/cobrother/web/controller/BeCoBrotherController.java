@@ -4,6 +4,7 @@ import com.cobrother.web.model.becobrother.BeCobrother;
 import com.cobrother.web.service.BeCoBrotherService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -15,7 +16,7 @@ public class BeCoBrotherController {
     public BeCoBrotherService beCoBrotherService;
 
     @PostMapping
-    public BeCobrother joiningRequest(BeCobrother beCobrother) {
+    public BeCobrother joiningRequest(@RequestBody BeCobrother beCobrother) {
         return beCoBrotherService.joiningRequest(beCobrother);
     }
 }

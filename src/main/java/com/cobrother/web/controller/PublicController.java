@@ -36,9 +36,9 @@ public class PublicController {
     public List<Venture> getVentures() {
         return ventureRepository.findAllByVenturesListedByCobrother(UserRole.ADMIN);
     }
-
-    @GetMapping("softwares")
-    public List<Software> getSoftwares() {
-        return softwareRepository.findAll();
-    }
+// added this line changess
+   @GetMapping("softwares")
+public List<Software> getSoftwares() {
+    return softwareRepository.findAllSoftwareListedByCobrother(UserRole.ADMIN);
+}
 }
