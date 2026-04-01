@@ -18,7 +18,18 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd ~/CoBrother-Backend_LTS
+
+            echo "Pulling latest code..."
             git pull origin main
-            mvn clean package -DskipTests
-            pkill java
+
+            echo "Building Spring Boot app..."
+            chmod +x mvnw
+            ./mvnw clean package -DskipTests
+
+            echo "Stopping old backend..."
+            pkill -f 'java -jar' || true
+
+            echo "Starting new backend..."
             nohup java -jar target/*.jar > server.log 2>&1 &
+
+            echo "Deployment completed!"
