@@ -40,6 +40,12 @@ public class VentureController {
         return ResponseEntity.status(403).body(Map.of("error", ex.getMessage()));
     }
 
+    // ── Exception handler: venture not found → 404 ─────────────────────────────
+    @ExceptionHandler(VentureNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleVentureNotFound(VentureNotFoundException ex) {
+        return ResponseEntity.status(404).body(Map.of("error", ex.getMessage()));
+    }
+
     // ── GET /all ──────────────────────────────────────────────────────────────
     @GetMapping("/all")
     public ResponseEntity<List<VentureDto>> getAllVentures() {

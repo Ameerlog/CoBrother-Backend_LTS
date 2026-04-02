@@ -40,7 +40,7 @@ public class VentureService {
 
     public Venture getVentureEntity(long id) {
         return ventureRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Venture not found: " + id));
+                .orElseThrow(() -> new VentureNotFoundException("Venture not found: " + id));
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -128,7 +128,10 @@ public class VentureService {
         if (!existing.getListedBy().getId().equals(currentUser.getId())) {
             throw new AccessDeniedException("You are not authorized to delete this venture.");
         }
-        ventureRepository.deleteById(id);
+
+        existing.getRoles().clear();
+        existing.getCoVentureApplications().clear();
+        ventureRepository.delete(existing);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
