@@ -1,0 +1,35 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~/CoBrother-Backend_LTS
+
+            echo "Pulling latest code..."
+            git pull origin main
+
+            echo "Building Spring Boot app..."
+            chmod +x mvnw
+            ./mvnw clean package -DskipTests
+
+            echo "Restarting backend service..."
+            sudo systemctl restart cobrother
+
+            echo "Checking backend status..."
+            sudo systemctl status cobrother --no-pager
+
+            echo "Deployment completed!"
