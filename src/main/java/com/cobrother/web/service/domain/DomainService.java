@@ -2,6 +2,7 @@ package com.cobrother.web.service.domain;
 
 import com.cobrother.web.Entity.cobranding.*;
 import com.cobrother.web.Entity.user.AppUser;
+import com.cobrother.web.Entity.user.UserRole;
 import com.cobrother.web.Repository.DomainRepository;
 import com.cobrother.web.service.auth.MailService;
 import com.cobrother.web.service.notification.NotificationService;
@@ -12,7 +13,6 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -43,7 +43,11 @@ public class DomainService {
 
     public ResponseEntity<Domain> getDomain(long id) {
         try {
-            return ResponseEntity.ok(domainRepository.getDomainById(id));
+            Domain domain = domainRepository.getDomainByIdAndStatusTrue(id);
+            if (domain == null) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(domain);
         } catch (Exception e) {
             return ResponseEntity.notFound().build();
         }
@@ -186,20 +190,26 @@ public class DomainService {
         return ResponseEntity.badRequest().build();
     }
 
-    public ResponseEntity<Domain> deleteDomain(long id, AppUser user) {
+    public ResponseEntity<Void> deleteDomain(long id, AppUser user) {
 
         try {
             Domain domain = domainRepository.getDomainById(id);
+            if (domain == null) {
+                return ResponseEntity.notFound().build();
+            }
 
-            // In updateDomain() and deleteDomain() — add before mutating
-            if (!domain.getListedBy().getId().equals(user.getId())) {
+            boolean isAdmin = user.getRole() == UserRole.ADMIN;
+            boolean isOwner = domain.getListedBy() != null && domain.getListedBy().getId().equals(user.getId());
+
+            if (!isAdmin && !isOwner) {
                 return ResponseEntity.status(403).build();
             }
-            domain.setStatus(false);
-            return ResponseEntity.ok(domainRepository.save(domain));
+
+            domainRepository.delete(domain);
+            return ResponseEntity.noContent().build();
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.internalServerError().build();
         }
     }
 

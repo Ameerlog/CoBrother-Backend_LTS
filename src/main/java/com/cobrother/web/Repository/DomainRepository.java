@@ -16,6 +16,7 @@ public interface DomainRepository extends JpaRepository<Domain, Long> {
 
 
     Domain getDomainById(long id);
+    Domain getDomainByIdAndStatusTrue(long id);
     List<Domain> findByListedBy(AppUser user);
     List<Domain> findByPurchasedBy(AppUser user);
     List<Domain> findByStatusTrue(); // all active listings// Add to DomainRepository

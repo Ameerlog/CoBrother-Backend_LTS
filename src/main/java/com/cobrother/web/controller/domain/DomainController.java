@@ -60,7 +60,7 @@ public class DomainController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Domain> deleteDomain(@PathVariable long id) {
+    public ResponseEntity<Void> deleteDomain(@PathVariable long id) {
         return domainService.deleteDomain(id, currentUserService.getCurrentUser());
     }
 
