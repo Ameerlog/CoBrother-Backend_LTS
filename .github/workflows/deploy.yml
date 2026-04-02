@@ -26,10 +26,10 @@ jobs:
             chmod +x mvnw
             ./mvnw clean package -DskipTests
 
-            echo "Stopping old backend..."
-            pkill -f 'java -jar' || true
+            echo "Restarting backend service..."
+            sudo systemctl restart cobrother
 
-            echo "Starting new backend..."
-            nohup java -jar target/*.jar > server.log 2>&1 &
+            echo "Checking backend status..."
+            sudo systemctl status cobrother --no-pager
 
             echo "Deployment completed!"
