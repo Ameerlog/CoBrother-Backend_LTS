@@ -3,6 +3,7 @@ package com.cobrother.web.service.venture;
 import com.cobrother.web.Entity.coventure.Venture;
 import com.cobrother.web.Entity.coventure.VentureRole;
 import com.cobrother.web.Entity.user.AppUser;
+import com.cobrother.web.Entity.user.UserRole;
 import com.cobrother.web.Repository.VentureRepository;
 import com.cobrother.web.model.venture.VentureDto;
 import com.cobrother.web.service.auth.CurrentUserService;
@@ -83,7 +84,10 @@ public class VentureService {
         Venture existing = getVentureEntity(id);
         AppUser currentUser = currentUserService.getCurrentUser();
 
-        if (!existing.getListedBy().getId().equals(currentUser.getId())) {
+        boolean isAdmin = currentUser.getRole() == UserRole.ADMIN;
+        boolean isOwner = existing.getListedBy().getId().equals(currentUser.getId());
+
+        if (!isAdmin && !isOwner) {
             throw new AccessDeniedException("You are not authorized to edit this venture.");
         }
 
@@ -125,7 +129,10 @@ public class VentureService {
         Venture existing = getVentureEntity(id);
         AppUser currentUser = currentUserService.getCurrentUser();
 
-        if (!existing.getListedBy().getId().equals(currentUser.getId())) {
+        boolean isAdmin = currentUser.getRole() == UserRole.ADMIN;
+        boolean isOwner = existing.getListedBy().getId().equals(currentUser.getId());
+
+        if (!isAdmin && !isOwner) {
             throw new AccessDeniedException("You are not authorized to delete this venture.");
         }
 

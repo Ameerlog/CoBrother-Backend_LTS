@@ -49,9 +49,15 @@ public class VentureController {
     // ── GET /all ──────────────────────────────────────────────────────────────
     @GetMapping("/all")
     public ResponseEntity<List<VentureDto>> getAllVentures() {
+        AppUser currentUser = null;
+        try {
+            currentUser = currentUserService.getCurrentUser();
+        } catch (Exception ignored) {}
+        
+        final AppUser user = currentUser;
         return ResponseEntity.ok(
                 ventureService.getAllVentures().stream()
-                        .map(VentureDto::from)
+                        .map(v -> VentureDto.from(v, user))
                         .collect(Collectors.toList())
         );
     }
@@ -59,9 +65,10 @@ public class VentureController {
     // ── GET /my ───────────────────────────────────────────────────────────────
     @GetMapping("/my")
     public ResponseEntity<List<VentureDto>> getMyVentures() {
+        AppUser currentUser = currentUserService.getCurrentUser();
         return ResponseEntity.ok(
-                ventureService.getVenturesByUser(currentUserService.getCurrentUser()).stream()
-                        .map(VentureDto::from)
+                ventureService.getVenturesByUser(currentUser).stream()
+                        .map(v -> VentureDto.from(v, currentUser))
                         .collect(Collectors.toList())
         );
     }
@@ -70,29 +77,32 @@ public class VentureController {
     @GetMapping("/{id}")
     public ResponseEntity<VentureDto> getVenture(@PathVariable long id) {
         Venture v = ventureService.getVentureEntity(id);
+        AppUser currentUser = null;
         try {
-            AppUser viewer = currentUserService.getCurrentUser();
-            analyticsService.trackVentureView(v, viewer);
+            currentUser = currentUserService.getCurrentUser();
+            analyticsService.trackVentureView(v, currentUser);
         } catch (Exception ignored) {}
-        return ResponseEntity.ok(VentureDto.from(v));
+        return ResponseEntity.ok(VentureDto.from(v, currentUser));
     }
 
     // ── POST / ────────────────────────────────────────────────────────────────
     @PostMapping
     public ResponseEntity<VentureDto> addVenture(@RequestBody VentureDto dto) {
+        AppUser currentUser = currentUserService.getCurrentUser();
         Venture venture = dto.toEntity();
-        venture.setListedBy(currentUserService.getCurrentUser());
+        venture.setListedBy(currentUser);
         Venture saved = ventureService.addVentureEntity(venture, dto.getRoles());
-        return ResponseEntity.ok(VentureDto.from(saved));
+        return ResponseEntity.ok(VentureDto.from(saved, currentUser));
     }
 
     // ── PUT /{id} ─────────────────────────────────────────────────────────────
     @PutMapping("/{id}")
     public ResponseEntity<VentureDto> updateVenture(
             @PathVariable long id, @RequestBody VentureDto dto) {
+        AppUser currentUser = currentUserService.getCurrentUser();
         Venture incoming = dto.toEntity();
         Venture updated = ventureService.updateVentureEntity(id, incoming, dto.getRoles());
-        return ResponseEntity.ok(VentureDto.from(updated));
+        return ResponseEntity.ok(VentureDto.from(updated, currentUser));
     }
 
     // ── DELETE /{id} ──────────────────────────────────────────────────────────

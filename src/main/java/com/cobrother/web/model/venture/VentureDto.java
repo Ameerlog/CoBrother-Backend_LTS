@@ -1,6 +1,8 @@
 package com.cobrother.web.model.venture;
 
 import com.cobrother.web.Entity.coventure.*;
+import com.cobrother.web.Entity.user.AppUser;
+import com.cobrother.web.Entity.user.UserRole;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,6 +25,7 @@ public class VentureDto {
     private UserSummary purchasedBy;
 
     private VentureStage stage;
+    private boolean canEdit;
     private List<VentureRoleDto> roles;   // ← typed list, replaces lookingFor string
     private String currentProblem;
 
@@ -102,6 +105,51 @@ public class VentureDto {
     }
 
     // ── Factory ───────────────────────────────────────────────────────────────
+    public static VentureDto from(Venture v, AppUser currentUser) {
+        VentureDto dto = new VentureDto();
+        dto.id                        = v.getId();
+        dto.brandDetails              = v.getBrandDetails();
+        dto.contactInfo               = v.getContactInfo();
+        dto.agreement                 = v.getAgreement();
+        dto.status                    = v.isStatus();
+        dto.views                     = v.getViews();
+        dto.coVentureApplicationCount = v.getCoVentureApplicationCount();
+        dto.stage                     = v.getStage();
+        dto.currentProblem            = v.getCurrentProblem();
+
+        // Calculate canEdit: true if current user is ADMIN or owner
+        if (currentUser != null && v.getListedBy() != null) {
+            boolean isAdmin = currentUser.getRole() == UserRole.ADMIN;
+            boolean isOwner = v.getListedBy().getId().equals(currentUser.getId());
+            dto.canEdit = isAdmin || isOwner;
+        } else {
+            dto.canEdit = false;
+        }
+
+        dto.roles = v.getRoles() == null ? List.of() :
+                v.getRoles().stream()
+                        .map(VentureRoleDto::from)
+                        .collect(Collectors.toList());
+
+        if (v.getListedBy() != null) {
+            UserSummary u = new UserSummary();
+            u.id        = v.getListedBy().getId();
+            u.email     = v.getListedBy().getEmail();
+            u.firstname = v.getListedBy().getFirstname();
+            u.lastname  = v.getListedBy().getLastname();
+            dto.listedBy = u;
+        }
+        if (v.getPurchasedBy() != null) {
+            UserSummary u = new UserSummary();
+            u.id        = v.getPurchasedBy().getId();
+            u.email     = v.getPurchasedBy().getEmail();
+            u.firstname = v.getPurchasedBy().getFirstname();
+            u.lastname  = v.getPurchasedBy().getLastname();
+            dto.purchasedBy = u;
+        }
+        return dto;
+    }
+
     public static VentureDto from(Venture v) {
         VentureDto dto = new VentureDto();
         dto.id                        = v.getId();
@@ -164,4 +212,5 @@ public class VentureDto {
     public VentureStage getStage() { return stage; }
     public List<VentureRoleDto> getRoles() { return roles; }
     public String getCurrentProblem() { return currentProblem; }
+    public boolean isCanEdit() { return canEdit; }
 }
