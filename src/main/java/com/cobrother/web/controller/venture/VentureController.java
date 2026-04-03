@@ -6,6 +6,7 @@ import com.cobrother.web.model.venture.VentureDto;
 import com.cobrother.web.service.S3Service;
 import com.cobrother.web.service.analytics.AnalyticsService;
 import com.cobrother.web.service.auth.CurrentUserService;
+import com.cobrother.web.service.venture.VentureNotFoundException;
 import com.cobrother.web.service.venture.VentureService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
