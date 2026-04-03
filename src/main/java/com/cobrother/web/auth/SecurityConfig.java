@@ -1,6 +1,7 @@
 package com.cobrother.web.auth;
 
 import com.cobrother.web.auth.CustomOAuth2UserService;
+import com.cobrother.web.auth.util.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.cobrother.web.service.auth.UserDetailsServiceImpl;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +46,9 @@ public class SecurityConfig {
 
     @Autowired
     private OAuth2AuthenticationFailureHandler oAuth2FailureHandler;
+
+    @Autowired
+    private HttpCookieOAuth2AuthorizationRequestRepository cookieAuthorizationRequestRepository;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -100,6 +104,13 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                 )
                 .oauth2Login(oauth2 -> oauth2
+                        .authorizationEndpoint(authorization -> authorization
+                                .baseUri("/oauth2/authorize")
+                                .authorizationRequestRepository(cookieAuthorizationRequestRepository)
+                        )
+                        .redirectionEndpoint(redirection -> redirection
+                                .baseUri("/login/oauth2/code/*")
+                        )
                         .userInfoEndpoint(userInfo -> userInfo
                                 .oidcUserService(customOAuth2UserService)
                         )

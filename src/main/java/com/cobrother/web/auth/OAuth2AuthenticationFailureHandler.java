@@ -1,5 +1,6 @@
 package com.cobrother.web.auth;
 
+import com.cobrother.web.auth.util.HttpCookieOAuth2AuthorizationRequestRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +17,9 @@ import java.io.IOException;
 @Component
 public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationFailureHandler {
 
+    @Autowired
+    private HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
+
     @Value("${app.oauth2.redirect-uri:http://localhost:5173/auth/callback}")
     private String redirectUri;
 
@@ -27,6 +31,8 @@ public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationF
         String targetUrl = UriComponentsBuilder.fromUriString(redirectUri)
                 .queryParam("error", exception.getLocalizedMessage())
                 .build().toUriString();
+
+        httpCookieOAuth2AuthorizationRequestRepository.removeAuthorizationRequestCookies(request, response);
 
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }

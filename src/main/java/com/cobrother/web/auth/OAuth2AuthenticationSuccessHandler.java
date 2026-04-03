@@ -1,6 +1,7 @@
 package com.cobrother.web.auth;
 
 import com.cobrother.web.Entity.user.RefreshToken;
+import com.cobrother.web.auth.util.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.cobrother.web.service.auth.CustomUserDetails;
 import com.cobrother.web.service.auth.JwtService;
 import com.cobrother.web.service.auth.RefreshTokenService;
@@ -45,6 +46,9 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     @Autowired
     private RefreshTokenService refreshTokenService;
 
+    @Autowired
+    private HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
+
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
                                         HttpServletResponse response,
@@ -74,6 +78,12 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
                 .queryParam("expiresIn", jwtService.getExpirationTime())
                 .build().toUriString();
 
+        clearAuthenticationAttributes(request, response);
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
+    }
+
+    protected void clearAuthenticationAttributes(HttpServletRequest request, HttpServletResponse response) {
+        super.clearAuthenticationAttributes(request);
+        httpCookieOAuth2AuthorizationRequestRepository.removeAuthorizationRequestCookies(request, response);
     }
 }
