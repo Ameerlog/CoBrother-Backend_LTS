@@ -18,7 +18,7 @@ spring:
   h2:
     console:
       enabled: ${SPRING_H2_CONSOLE_ENABLED}
-      path: ${SPRING_H2_CONSOLE_PATH}
+      path: ${SPRING_H2_CONSOLE_PATH:/h2-console}
 
   mail:
     username: ${SPRING_MAIL_USERNAME}
