@@ -6,11 +6,36 @@ on:
       - main
 
 jobs:
-  deploy:
+  build_and_deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to EC2
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build with Maven
+        run: |
+          chmod +x mvnw
+          ./mvnw clean package -DskipTests
+
+      - name: Copy JAR to EC2
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "target/*.jar"
+          target: "~/CoBrother-Backend_LTS/target"
+          strip_components: 1
+
+      - name: Restart Backend Service
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -18,18 +43,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd ~/CoBrother-Backend_LTS
-
-            echo "Pulling latest code..."
-            git pull origin main
-
-            echo "Building Spring Boot app..."
-            chmod +x mvnw
-            ./mvnw clean package -DskipTests
-
             echo "Restarting backend service..."
             sudo systemctl restart cobrother
-
             echo "Checking backend status..."
             sudo systemctl status cobrother --no-pager
-
-            echo "Deployment completed!"
