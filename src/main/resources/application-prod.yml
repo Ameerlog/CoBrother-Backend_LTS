@@ -1,16 +1,20 @@
 server:
   port: 8080
+  servlet:
+    session:
+      cookie:
+        domain: .cobrother.com
+        secure: true
+        same-site: none
 
 spring:
   application:
-    name: cobrother-dev   # 🔥 override
-
+    name: cobrother-prod   # Changed to prod since it is prod
   datasource:
     url: jdbc:postgresql://localhost:5432/cobrother
     username: postgres
     password: Aultum307
     driver-class-name: org.postgresql.Driver
-
   jpa:
     hibernate:
       ddl-auto: update

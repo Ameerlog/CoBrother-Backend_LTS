@@ -20,25 +20,37 @@ public class CookieUtils {
         return Optional.empty();
     }
 
+    /**
+     * Writes the cookie via a raw Set-Cookie response header so that
+     * SameSite=None; Secure is guaranteed — jakarta.servlet.Cookie.setAttribute()
+     * is not reliably honoured by every embedded Tomcat version.
+     */
     public static void addCookie(HttpServletResponse response, String name, String value, int maxAge) {
-        Cookie cookie = new Cookie(name, value);
-        cookie.setPath("/");
-        cookie.setHttpOnly(true);
-        cookie.setMaxAge(maxAge);
-        cookie.setAttribute("SameSite", "None"); 
-        cookie.setSecure(true);
-        response.addCookie(cookie);
+        String header = name + "=" + value
+                + "; Path=/"
+                + "; Max-Age=" + maxAge
+                + "; HttpOnly"
+                + "; Secure"
+                + "; SameSite=None";
+        response.addHeader("Set-Cookie", header);
     }
 
+    /**
+     * Expires the cookie.  Must also carry SameSite=None; Secure, otherwise
+     * the browser won't match and remove the original cross-site cookie.
+     */
     public static void deleteCookie(HttpServletRequest request, HttpServletResponse response, String name) {
         Cookie[] cookies = request.getCookies();
         if (cookies != null && cookies.length > 0) {
             for (Cookie cookie : cookies) {
                 if (cookie.getName().equals(name)) {
-                    cookie.setValue("");
-                    cookie.setPath("/");
-                    cookie.setMaxAge(0);
-                    response.addCookie(cookie);
+                    String header = name + "="
+                            + "; Path=/"
+                            + "; Max-Age=0"
+                            + "; HttpOnly"
+                            + "; Secure"
+                            + "; SameSite=None";
+                    response.addHeader("Set-Cookie", header);
                 }
             }
         }
